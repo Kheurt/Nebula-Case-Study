@@ -1,9 +1,9 @@
-import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // ---------------------------------------------------------------------------
 // In-memory rate limiter (replace with @upstash/ratelimit for production)
+// Edge-compatible: no Node.js built-ins used.
 // ---------------------------------------------------------------------------
 
 type RateLimitEntry = { count: number; resetAt: number };
@@ -50,7 +50,7 @@ function applyRateLimit(req: NextRequest): NextResponse | null {
       const { allowed, retryAfterSeconds } = checkRateLimit(key, rule.maxRequests, rule.windowMs);
 
       if (!allowed) {
-        console.warn(JSON.stringify({ level: 'warn', message: 'Rate limit exceeded', ip, pathname }));
+        console.warn(`[rate-limit] 429 ${pathname} ip=${ip}`);
         return new NextResponse('Too Many Requests', {
           status: 429,
           headers: { 'Retry-After': String(retryAfterSeconds), 'Content-Type': 'text/plain' },
@@ -63,48 +63,44 @@ function applyRateLimit(req: NextRequest): NextResponse | null {
 }
 
 // ---------------------------------------------------------------------------
-// Middleware
+// Auth guard — checks NextAuth session cookie (Edge-compatible, no jwt verify)
 // ---------------------------------------------------------------------------
 
-export default withAuth(
-  function middleware(req) {
-    const rateLimitResponse = applyRateLimit(req);
-    if (rateLimitResponse) return rateLimitResponse;
-    return NextResponse.next();
-  },
-  {
-    callbacks: {
-      authorized({ token, req }) {
-        const { pathname } = req.nextUrl;
+const PROTECTED_PREFIXES = ['/my-programs', '/coach', '/admin'];
 
-        // Public routes — always allowed
-        if (
-          pathname.startsWith('/login') ||
-          pathname.startsWith('/register') ||
-          pathname.startsWith('/programs') ||
-          pathname.startsWith('/api/auth') ||
-          pathname === '/'
-        ) {
-          return true;
-        }
+function isProtectedRoute(pathname: string): boolean {
+  return PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
 
-        // Protected routes — must be authenticated
-        if (
-          pathname.startsWith('/my-programs') ||
-          pathname.startsWith('/coach') ||
-          pathname.startsWith('/admin')
-        ) {
-          return !!token;
-        }
+function hasSessionCookie(req: NextRequest): boolean {
+  // NextAuth sets __Secure-next-auth.session-token in prod, next-auth.session-token in dev
+  return (
+    !!req.cookies.get('next-auth.session-token') ||
+    !!req.cookies.get('__Secure-next-auth.session-token')
+  );
+}
 
-        return true;
-      },
-    },
-    pages: {
-      signIn: '/login',
-    },
-  },
-);
+// ---------------------------------------------------------------------------
+// Proxy handler
+// ---------------------------------------------------------------------------
+
+export default function proxy(req: NextRequest) {
+  // Rate limiting
+  const rateLimitResponse = applyRateLimit(req);
+  if (rateLimitResponse) return rateLimitResponse;
+
+  const { pathname } = req.nextUrl;
+
+  // Auth guard for protected routes
+  if (isProtectedRoute(pathname) && !hasSessionCookie(req)) {
+    const loginUrl = req.nextUrl.clone();
+    loginUrl.pathname = '/login';
+    loginUrl.searchParams.set('callbackUrl', pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: [

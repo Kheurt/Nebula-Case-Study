@@ -51,9 +51,13 @@ export async function getMyEnrollments(): Promise<ActionResult<EnrollmentWithDet
                 explorations: { select: { id: true, title: true, description: true, dueDate: true } },
               },
             },
-            sessions: { orderBy: { orderIndex: 'asc' } },
+            sessions: {
+              orderBy: { orderIndex: 'asc' },
+              include: {
+                explorations: { select: { id: true, title: true, description: true, dueDate: true } },
+              },
+            },
             _count: { select: { enrollments: true } },
-            explorations: { select: { id: true, title: true, description: true, dueDate: true } },
           },
         },
       },
@@ -80,7 +84,7 @@ export async function getMyEnrollments(): Promise<ActionResult<EnrollmentWithDet
       })),
       explorations: [
         ...e.cohort.program.explorations,
-        ...e.cohort.explorations,
+        ...e.cohort.sessions.flatMap((s) => s.explorations),
       ],
     }));
 

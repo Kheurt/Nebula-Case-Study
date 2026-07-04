@@ -8,6 +8,7 @@ import { ProgramForm } from '@/features/programs/components/ProgramForm';
 import { Badge } from '@/components/ui/Badge';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import type { DOMAINS, DIFFICULTY_LEVELS } from '@/features/programs/schemas';
 import Link from 'next/link';
 
 export default async function CoachProgramDetailPage({
@@ -61,8 +62,8 @@ export default async function CoachProgramDetailPage({
                 defaultValues={{
                   title: program.title,
                   description: program.description,
-                  domain: program.domain,
-                  difficultyLevel: program.difficultyLevel,
+                  domain: program.domain as typeof DOMAINS[number],
+                  difficultyLevel: program.difficultyLevel as typeof DIFFICULTY_LEVELS[number],
                   targetAudience: program.targetAudience,
                   sessionCount: program.sessionCount,
                   maxCohortSize: program.maxCohortSize,

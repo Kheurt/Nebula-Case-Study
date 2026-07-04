@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { createProgramSchema, CreateProgramInput, DOMAINS, DIFFICULTY_LEVELS } from '@/features/programs/schemas';
@@ -23,7 +23,8 @@ export function ProgramForm({ programId, defaultValues }: ProgramFormProps) {
   const {
     register,
     handleSubmit,
-    control,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<CreateProgramInput>({
     resolver: zodResolver(createProgramSchema),
@@ -36,10 +37,14 @@ export function ProgramForm({ programId, defaultValues }: ProgramFormProps) {
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: 'learningOutcomes',
-  });
+  const learningOutcomes = watch('learningOutcomes') ?? [''];
+
+  function appendOutcome() {
+    setValue('learningOutcomes', [...learningOutcomes, '']);
+  }
+  function removeOutcome(index: number) {
+    setValue('learningOutcomes', learningOutcomes.filter((_, i) => i !== index));
+  }
 
   async function onSubmit(data: CreateProgramInput) {
     setError(null);
@@ -117,15 +122,15 @@ export function ProgramForm({ programId, defaultValues }: ProgramFormProps) {
       <div>
         <label className="text-sm font-medium text-gray-700 mb-2 block">Learning Outcomes</label>
         <div className="space-y-2">
-          {fields.map((field, index) => (
-            <div key={field.id} className="flex gap-2">
+          {learningOutcomes.map((_, index) => (
+            <div key={index} className="flex gap-2">
               <input
                 {...register(`learningOutcomes.${index}`)}
                 className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
                 placeholder={`Outcome ${index + 1}`}
               />
-              {fields.length > 1 && (
-                <Button type="button" variant="danger" size="sm" onClick={() => remove(index)}>
+              {learningOutcomes.length > 1 && (
+                <Button type="button" variant="danger" size="sm" onClick={() => removeOutcome(index)}>
                   ✕
                 </Button>
               )}
@@ -137,7 +142,7 @@ export function ProgramForm({ programId, defaultValues }: ProgramFormProps) {
           variant="ghost"
           size="sm"
           className="mt-2"
-          onClick={() => append('')}
+          onClick={appendOutcome}
         >
           + Add outcome
         </Button>

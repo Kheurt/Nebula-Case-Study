@@ -18,7 +18,7 @@ export async function createCohort(
 
   const parsed = createCohortSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.errors[0].message, code: 'VALIDATION_ERROR' };
+    return { success: false, error: parsed.error.issues[0].message, code: 'VALIDATION_ERROR' };
   }
 
   const { startDate, endDate, maxParticipants, sessions } = parsed.data;

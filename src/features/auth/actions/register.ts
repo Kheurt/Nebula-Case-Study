@@ -9,7 +9,7 @@ import { ActionResult } from '@/lib/action-result';
 export async function registerStudent(input: RegisterInput): Promise<ActionResult<{ userId: string }>> {
   const parsed = registerSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.errors[0].message, code: 'VALIDATION_ERROR' };
+    return { success: false, error: parsed.error.issues[0].message, code: 'VALIDATION_ERROR' };
   }
 
   const { name, email, password } = parsed.data;

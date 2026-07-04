@@ -18,7 +18,7 @@ export async function updateProgram(
 
   const parsed = updateProgramSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.errors[0].message, code: 'VALIDATION_ERROR' };
+    return { success: false, error: parsed.error.issues[0].message, code: 'VALIDATION_ERROR' };
   }
 
   try {

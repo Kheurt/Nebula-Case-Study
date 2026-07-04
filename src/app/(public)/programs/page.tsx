@@ -2,6 +2,9 @@ import { getPublishedPrograms } from '@/features/programs/actions/get-published-
 import { ProgramCard } from '@/features/programs/components/ProgramCard';
 import { PageShell } from '@/components/layout/PageShell';
 import { ProgramFilters } from '@/features/programs/components/ProgramFilters';
+import { DOMAINS } from '@/features/programs/schemas';
+
+type Domain = typeof DOMAINS[number];
 
 interface ProgramsPageProps {
   searchParams: Promise<{ domain?: string; search?: string; coachId?: string }>;
@@ -9,8 +12,13 @@ interface ProgramsPageProps {
 
 export default async function ProgramsPage({ searchParams }: ProgramsPageProps) {
   const params = await searchParams;
+
+  const domainParam = DOMAINS.includes(params.domain as Domain)
+    ? (params.domain as Domain)
+    : undefined;
+
   const result = await getPublishedPrograms({
-    domain: params.domain as string | undefined,
+    domain: domainParam,
     search: params.search,
     coachId: params.coachId,
   });

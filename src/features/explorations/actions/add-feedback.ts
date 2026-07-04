@@ -17,7 +17,7 @@ export async function addCoachFeedback(
 
   const parsed = addFeedbackSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.errors[0].message, code: 'VALIDATION_ERROR' };
+    return { success: false, error: parsed.error.issues[0].message, code: 'VALIDATION_ERROR' };
   }
 
   const coachId = session!.user.id;

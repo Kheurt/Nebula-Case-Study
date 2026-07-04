@@ -4,7 +4,7 @@ export const sessionInputSchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
   scheduledAt: z.string().datetime({ message: 'Invalid ISO datetime' }),
-  durationMinutes: z.number().int().min(15).max(480).default(45),
+  durationMinutes: z.number().int().min(15).max(480),
   orderIndex: z.number().int().min(1),
 });
 

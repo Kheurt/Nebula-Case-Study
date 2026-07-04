@@ -14,7 +14,7 @@ export async function createProgram(input: CreateProgramInput): Promise<ActionRe
 
   const parsed = createProgramSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.errors[0].message, code: 'VALIDATION_ERROR' };
+    return { success: false, error: parsed.error.issues[0].message, code: 'VALIDATION_ERROR' };
   }
 
   const { learningOutcomes, ...rest } = parsed.data;

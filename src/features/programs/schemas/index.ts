@@ -17,7 +17,7 @@ export const createProgramSchema = z.object({
   targetAudience: z.string().min(1),
   difficultyLevel: z.enum(DIFFICULTY_LEVELS),
   sessionCount: z.number().int().min(2).max(4),
-  recommendedCohortSize: z.number().int().min(1).max(20).default(3),
+  recommendedCohortSize: z.number().int().min(1).max(20),
   maxCohortSize: z.number().int().min(1).max(20),
   learningOutcomes: z.array(z.string().min(1)).min(1, 'At least one learning outcome is required'),
 });

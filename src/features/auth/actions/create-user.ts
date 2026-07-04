@@ -15,7 +15,7 @@ export async function createUser(input: CreateUserInput): Promise<ActionResult<{
 
   const parsed = createUserSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.errors[0].message, code: 'VALIDATION_ERROR' };
+    return { success: false, error: parsed.error.issues[0].message, code: 'VALIDATION_ERROR' };
   }
 
   const { name, email, password, profileName } = parsed.data;
