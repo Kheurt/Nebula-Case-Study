@@ -1,19 +1,21 @@
 <!--
 Sync Impact Report
 
-Version change: template -> 1.0.0
+Version change: 1.0.0 -> 1.1.0
 
 Modified principles:
-- [PRINCIPLE_1_NAME] -> Test-First & Quality
-- [PRINCIPLE_2_NAME] -> Code Review & Small Changes
-- [PRINCIPLE_3_NAME] -> Semantic Versioning & Compatibility
-- [PRINCIPLE_4_NAME] -> Observability & Operational Readiness
-- [PRINCIPLE_5_NAME] -> Security & Data Protection
+- Test-First & Quality: expanded with Playwright E2E requirement, co-located tests, CI single-command constraint
+- Observability & Operational Readiness: expanded with structured JSON logs, metrics (Prometheus/OTel), traces,
+  environment-aware error visibility rules
+- Security & Data Protection: expanded with Zod validation, OWASP protections, bcrypt/argon2, rate limiting,
+  mandatory documentation of security decisions
+
+Added principles:
+- Tech Stack & Architecture
+- Authentication & Authorization (RBAC)
 
 Added sections:
-- Decision-making & Roles
-- Development Workflow & Operational Policies
-- Contribution, CI, Release & Operational Procedures
+- Engineering Standards (language, feature-driven architecture, docs/, data/, scripts/)
 
 Removed sections: none
 
@@ -26,16 +28,40 @@ Follow-up TODOs:
 - Add .github/CODEOWNERS to codify ownership
 - Define numeric SLOs and alerting playbooks (see Operational Readiness)
 - Add release automation CI (recommended)
+- Initialise Prisma schema with RBAC entities (User, Profile, Permission, UserProfile, ProfilePermission, UserPermission)
 -->
 
 # case-study-test Constitution
 
 ## Core Principles
 
+### Tech Stack & Architecture
+The canonical tech stack for this project is:
+
+- **Framework**: Next.js (App Router), TypeScript in strict mode.
+- **Database**: SQLite.
+- **ORM**: Prisma (or Drizzle if explicitly agreed upon in an RFC) — always through a typed data-access layer. Raw queries
+  scattered across the codebase are FORBIDDEN.
+- **Authentication**: NextAuth (Auth.js). Sessions, providers, and callbacks MUST be explicit and auditable.
+- **Styling**: Tailwind CSS. Inline styles and ad-hoc CSS files are FORBIDDEN unless justified in the PR.
+- **Forms & Validation**: Zod schemas shared between client and server (single source of truth). Every form MUST be validated
+  both client-side (UX) and server-side (security). The client MUST NEVER be trusted without server-side re-validation.
+- **Architecture**: Feature-Driven Architecture — each business capability is a self-contained module containing UI,
+  server actions/API routes, Zod schemas, services, unit tests, Playwright tests, and a feature README.
+
+The data model (including RBAC entities) MUST be designed before writing feature code.
+
+Rationale: A fixed, well-understood stack reduces cognitive overhead and ensures decisions are consistent across the codebase.
+
 ### Test-First & Quality
-All production code MUST be accompanied by automated tests appropriate for the change: unit tests for logic, integration/contract tests for
-cross-component behavior, and end-to-end tests where the user experience requires it. Tests SHOULD be written before implementation when
-feasible (TDD). CI MUST fail on regressions and no pull request may be merged while required tests are failing.
+All production code MUST be accompanied by automated tests:
+- **Unit tests**: verifying business logic, validation schemas, permission resolution, and service functions in isolation.
+- **Playwright E2E tests**: covering the real user journey for each feature (happy path + key permission-denied/error paths),
+  run against a seeded test database.
+
+Tests SHOULD be written before implementation when feasible (TDD). Tests MUST be co-located within the feature folder or clearly
+mapped to it — orphan test suites are not allowed. CI MUST be able to run the full suite (unit + Playwright) in a single command
+and MUST fail on regressions. No pull request may be merged while required tests are failing.
 
 Rationale: Automated tests prevent regressions, make reviews faster, and preserve long-term maintainability.
 
@@ -60,18 +86,118 @@ Breaking changes MUST be clearly marked in PRs, include a migration plan, and re
 Rationale: Predictable versioning reduces friction for users and downstream integrators.
 
 ### Observability & Operational Readiness
-Features and services MUST include basic observability: structured logs, metrics, and at least one meaningful alert for operational failure
-modes. New services or features that affect availability or data integrity MUST include an observable target or suggested SLO and a playbook
-for alerting and on-call responders.
+Every feature MUST be observable by design:
+
+- **Structured logs**: JSON-formatted, with consistent fields (`timestamp`, `level`, `requestId`/`traceId`, `userId` when
+  available, `feature`/`module`, `message`, `context` payload). `console.log` with unstructured strings is FORBIDDEN in
+  production code paths.
+- **Metrics**: expose counters/timers for critical operations (auth attempts, permission denials, request durations, error
+  rates) in a format compatible with Prometheus or OpenTelemetry.
+- **Traces**: instrument critical request paths (auth, data mutations, external calls) so a single request can be followed
+  end-to-end.
+- **Environment-aware error visibility**:
+  - In `dev`/`local`/`preprod`: all errors MUST be displayed explicitly and in detail — especially auth, authorization,
+    permission, and security-related errors (clear messages, stack traces, failing permission/resource identified). Nothing
+    MUST fail silently during development.
+  - In `production`: error details MUST be sanitized for end users but fully preserved in structured logs/traces.
+
+Every thrown error MUST carry enough context (who, what resource, what permission was missing, correlation id) to be traceable
+without reproducing the bug manually. New services or features that affect availability or data integrity MUST include an
+observable target or suggested SLO and an incident playbook.
 
 Rationale: Observability is essential for diagnosing issues and meeting reliability commitments.
 
 ### Security & Data Protection
-Secrets, credentials, private keys, and other sensitive data MUST NOT be committed to the repository. Use environment variables or a
-supported secrets manager. Any change that touches authentication/authorization, secrets handling, or sensitive data MUST include a
-security review (see CONTRIBUTING.md) and follow responsible disclosure procedures.
+Security is non-negotiable. The following rules apply without exception:
+
+- All user input MUST be treated as hostile until validated (Zod) and sanitized.
+- Secrets, credentials, private keys, and connection strings MUST NOT be committed. Use environment variables; document all
+  required variables in `.env.example`.
+- All server actions and API routes MUST explicitly check authentication and authorization before executing any business logic.
+  UI-level hiding of controls is a UX convenience, not a security boundary.
+- Protect against by design: SQL injection (ORM usage only, no raw string concatenation), XSS, CSRF, IDOR, mass assignment,
+  and privilege escalation via crafted payloads.
+- Passwords and sensitive data MUST be hashed/encrypted with industry-standard libraries (`bcrypt`/`argon2`). Plaintext
+  storage is strictly forbidden.
+- Rate limiting and basic abuse protection MUST be considered for sensitive endpoints (login, password reset, registration).
+- Every security-relevant decision MUST be documented in code comments or the feature README (why a permission check exists,
+  why a route is protected a certain way).
+- Any change touching authentication/authorization, secrets handling, or sensitive data MUST include a security review
+  (see CONTRIBUTING.md) and follow responsible disclosure procedures.
 
 Rationale: Protecting user data and credentials is a top priority.
+
+### Authentication & Authorization (RBAC)
+Authentication and authorization MUST NEVER be conflated. They serve distinct concerns:
+
+- **Authentication** (NextAuth): establishes *who* the user is.
+- **Authorization** (RBAC): determines *what* the authenticated user can do.
+
+The RBAC model is strict and explicitly modeled in the data layer:
+
+- **Permission**: an atomic grant of access to a specific resource/action (e.g. `invoice:read`, `user:delete`,
+  `report:export`).
+- **Profile (Role)**: a named collection of permissions (e.g. `Admin`, `Accountant`, `Viewer`).
+- A `User` is assigned one or more `Profile`(s).
+- A `Profile` owns a set of `Permission`(s).
+- A `User` inherits all permissions from their assigned Profile(s).
+- A `User` MAY additionally receive individual permissions NOT part of their Profile (exceptions/overrides).
+
+Rules:
+- Every user action (UI action, server action, API call) MUST be gated by an explicit **permission** check — never by role
+  name directly. The check MUST resolve the user's effective permission set
+  (Profile permissions ∪ individually granted permissions) before allowing the action.
+- Permission checks MUST happen server-side, always.
+- The data model MUST reflect this explicitly:
+  `User`, `Profile`, `Permission`, `UserProfile`, `ProfilePermission`, `UserPermission` join tables, fully normalized.
+
+Rationale: Role-name checks break silently when roles are renamed or merged. Permission-level checks are explicit, testable,
+and resilient to model changes.
+
+## Engineering Standards
+
+### Language
+The entire project — code, comments, commit messages, documentation, UI copy — MUST be written in **English**, regardless of
+the language used to communicate during development.
+
+### Feature-Driven Architecture
+Every new feature MUST live in a dedicated folder containing:
+- UI components
+- Server actions / API routes
+- Zod schemas
+- Service layer
+- Unit tests
+- Playwright E2E tests
+- Feature README (purpose, permissions involved, API/actions exposed, data model touched, how to test)
+
+No feature logic may be scattered across the codebase outside its module.
+
+### Documentation (`docs/`)
+All documentation lives in `docs/`, written in Markdown with Mermaid diagrams, in English. Required content:
+- `docs/README.md` — root index/table of contents.
+- Context diagram (system boundaries, external actors).
+- Use-case diagrams (per feature/domain).
+- Class diagrams (data model, including RBAC entities).
+- Sequence diagrams — one per significant use case.
+- Activity diagrams — one per key user activity/workflow.
+- Functional architecture diagram (features, layers, data flow).
+- Deployment diagram for a containerized environment (app container, SQLite volume, reverse proxy, env config).
+- Per-feature README (see Feature-Driven Architecture above).
+
+### Test Data (`data/`)
+Realistic seed datasets MUST be provided for every feature/domain requiring test data. Seed data MUST include enough variety
+to exercise RBAC edge cases (users with profile-only permissions, users with individual overrides, users with denied access).
+Data files MUST be structured (JSON/SQL/seed scripts) and reproducible.
+
+### Utility Scripts (`scripts/`)
+The following shell scripts MUST be provided and maintained:
+- `seed.sh` — load test data from `data/` into the database.
+- `create-user.sh` — create a user with profile/permission assignment interactively or via parameters.
+- `reset-db.sh` — wipe the database to a minimal state (schema + reference data only, no business/test data).
+- `deploy-vercel.sh` — deploy the application to Vercel.
+- `dev-setup.sh` — install deps, generate Prisma client, run migrations, bootstrap local environment.
+
+All scripts MUST be idempotent where possible, documented with usage comments, and fail loudly with clear error messages.
 
 ## Decision-making & Roles
 
@@ -141,4 +267,4 @@ Compliance and reviews
 - All PRs with material scope MUST include a short "Constitution compliance" note describing how the change satisfies the
   Constitution and listing any gates (tests, security review, observability) required before merge.
 
-**Version**: 1.0.0 | **Ratified**: 2026-07-04 | **Last Amended**: 2026-07-04
+**Version**: 1.1.0 | **Ratified**: 2026-07-04 | **Last Amended**: 2026-07-04
