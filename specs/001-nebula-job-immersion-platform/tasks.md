@@ -18,7 +18,7 @@
 
 **Purpose**: Initialize the project, install dependencies, configure tooling. No business logic yet.
 
-- [ ] T001 Scaffold Next.js 14+ project with App Router, TypeScript strict, pnpm, Tailwind CSS (`create-next-app` preset) in repository root
+- [ ] T001 Scaffold Next.js 14+ project with App Router, TypeScript strict, npm, Tailwind CSS (`create-next-app` preset) in repository root; add `package.json` scripts: `"db:generate"`, `"db:migrate"`, `"db:seed"`, `"db:reset"`, `"test:unit"`, `"test:e2e"`, `"test:ci"` (unit + e2e sequential)
 - [ ] T002 Configure TypeScript (`tsconfig.json`): strict mode, path aliases `@/*` → `./src/*`, target ES2022
 - [ ] T003 [P] Configure Tailwind CSS (`tailwind.config.ts`), PostCSS, and global styles in `src/app/globals.css`
 - [ ] T004 [P] Configure ESLint (Next.js recommended + typescript rules) and Prettier in `.eslintrc.json` and `.prettierrc`
@@ -35,11 +35,11 @@
 - [ ] T015 [P] Create shared UI primitives in `src/components/ui/`: `Button.tsx`, `Input.tsx`, `Select.tsx`, `Badge.tsx`, `Card.tsx`, `Toast.tsx`, `Skeleton.tsx`
 - [ ] T016 [P] Create layout components in `src/components/layout/`: `Navbar.tsx` (shows active user + role, DevRoleSwitcher mount point), `PageShell.tsx` (max-width wrapper + padding)
 - [ ] T017 [P] Create root layout in `src/app/layout.tsx` (SessionProvider wrapper, Navbar, Tailwind base)
-- [ ] T018 [P] Create `DevRoleSwitcher.tsx` in `src/components/`: rendered only when `process.env.NODE_ENV === 'development'`; renders one button per seeded role; calls `signIn('credentials', { email, password })` on click
+- [ ] T018 [P] Create `DevRoleSwitcher.tsx` in `src/components/`: rendered only when `process.env.NODE_ENV === 'development'`; renders one button per seeded role; calls `signIn('credentials', { email, password })` on click; credentials sourced from `process.env.DEV_STUDENT_EMAIL`, `process.env.DEV_COACH_EMAIL`, `process.env.DEV_ADMIN_EMAIL`, `process.env.DEV_SEED_PASSWORD` — add these as empty placeholders to `.env.example`; never commit real values
 - [ ] T019 Configure Vitest in `vitest.config.ts` and `src/test-utils/` (setup file, mock helpers for Prisma)
-- [ ] T020 Configure Playwright in `playwright.config.ts`; create `e2e/global-setup.ts` that authenticates as student, coach, and admin and saves `storageState` to `e2e/fixtures/{student,coach,admin}.json`
+- [ ] T020 Configure Playwright in `playwright.config.ts`; create `e2e/global-setup.ts` **stub** that authenticates as student, coach, and admin and saves `storageState` to `e2e/fixtures/{student,coach,admin}.json` — **stub only at this point**: real authentication cannot succeed until seed accounts exist (T021); full implementation completed in T030
 
-**Checkpoint**: Project compiles (`pnpm build` passes), DB migrated, auth skeleton in place, test runners configured.
+**Checkpoint**: Project compiles (`npm run build` passes), DB migrated, auth skeleton in place, test runners configured.
 
 ---
 
@@ -49,7 +49,7 @@
 
 **⚠️ CRITICAL**: No user story work can begin until the seed is functional and auth actions are working.
 
-- [ ] T021 Create Prisma seed script in `prisma/seed.ts`: seed `Profile` (student/coach/admin), `Permission` (program:create, program:edit, program:read, cohort:create, cohort:manage, cohort:read, enrollment:create, exploration:create, exploration:read, admin:read, user:create), `ProfilePermission` links, three `User` accounts (student@nebula.dev/student123!, coach@nebula.dev/coach123!, admin@nebula.dev/admin123!) with bcryptjs-hashed passwords and `UserProfile` assignments
+- [ ] T021 Create Prisma seed script in `prisma/seed.ts`: seed `Profile` (student/coach/admin), `Permission` (program:create, program:edit, program:read, cohort:create, cohort:manage, cohort:read, enrollment:create, exploration:create, exploration:read, **exploration:submit**, admin:read, user:create), `ProfilePermission` links — student profile gets: enrollment:create, exploration:read, exploration:submit; coach profile gets: program:create, program:edit, program:read, cohort:create, cohort:manage, cohort:read, exploration:create, exploration:read; admin profile gets: admin:read, user:create; **note**: program catalog browsing (`getPublishedPrograms`) is fully public — no permission check required; `program:read` is used for coach-only detail access only; three `User` accounts (student@nebula.dev/student123!, coach@nebula.dev/coach123!, admin@nebula.dev/admin123!) with bcryptjs-hashed passwords and `UserProfile` assignments
 - [ ] T022 [P] Create sample seed data in `data/seed-programs.json`: one published program with one cohort, three sessions, to support independent testing
 - [ ] T023 [P] Create dev shell scripts: `scripts/dev-setup.sh` (install + prisma generate + migrate + seed), `scripts/seed.sh` (seed only), `scripts/reset-db.sh` (drop + migrate + seed)
 - [ ] T024 [P] Create auth Zod schemas in `src/features/auth/schemas/index.ts`: `registerSchema` (name min 2, email valid, password min 8), `loginSchema`, `createUserSchema`
@@ -58,9 +58,10 @@
 - [ ] T027 [P] Implement `/login` page in `src/app/(public)/login/page.tsx`: `LoginForm` component in `src/features/auth/components/LoginForm.tsx`; calls `signIn('credentials', ...)` from next-auth/react
 - [ ] T028 Create NextAuth API route in `src/app/api/auth/[...nextauth]/route.ts` (re-exports handler from `src/lib/auth.ts`)
 - [ ] T029 Unit tests in `src/features/auth/__tests__/register.test.ts`: schema validation (invalid email, short password), duplicate email error handling, password never stored in plaintext
-- [ ] T030 Playwright E2E auth fixtures: extend `e2e/global-setup.ts` to use the seeded accounts; verify `storageState` files generated for student, coach, admin
+- [ ] T030 Playwright E2E auth fixtures: **complete** `e2e/global-setup.ts` stub (created in T020) — now that seed accounts exist (T021), implement real `signIn` calls and verify `storageState` files generated for student, coach, admin
+- [ ] T030b Implement rate limiting on sensitive endpoints: install `next-rate-limit` (or `@upstash/ratelimit` for Edge middleware compatibility); apply limits in `src/middleware.ts` or a dedicated `src/lib/rate-limit.ts` — `/api/auth/callback/credentials` max 10 req/min per IP, `/register` max 5 req/min per IP; return `429 Too Many Requests` with `Retry-After` header on breach; log rate-limit hits via structured logger; document policy in `src/features/auth/README.md`
 
-**Checkpoint**: `pnpm db:seed` runs; three test accounts exist; `/register` and `/login` work; Playwright auth fixtures ready; unit tests pass.
+**Checkpoint**: `npm run db:seed` runs; three test accounts exist; `/register` and `/login` work; Playwright auth fixtures ready; unit tests pass.
 
 ---
 
@@ -73,9 +74,9 @@
 ### Implementation — Programs (Read side)
 
 - [ ] T031 [P] [US1] Create program Zod schemas in `src/features/programs/schemas/index.ts`: `programFilterSchema` (domain?, search?)
-- [ ] T032 [P] [US1] Implement `getPublishedPrograms(filters?)` server action in `src/features/programs/actions/get-published-programs.ts`: returns only `PUBLISHED` programs; applies domain and search filters; requires `program:read` permission (or public)
+- [ ] T032 [P] [US1] Implement `getPublishedPrograms(filters?)` server action in `src/features/programs/actions/get-published-programs.ts`: **truly public — no permission check**; returns only `PUBLISHED` programs; uses nullable `getServerSession()` to optionally enrich response (e.g., enrolled indicator if authenticated); applies domain, coach, and search filters
 - [ ] T033 [P] [US1] Implement `getProgramDetail(programId)` server action in `src/features/programs/actions/get-program-detail.ts`: returns program + cohorts with remaining slots; hides DRAFT/ARCHIVED from non-coach callers
-- [ ] T034 [US1] Implement programs catalog page in `src/app/(public)/programs/page.tsx`: lists published programs, domain filter UI, search field, empty state with CTA
+- [ ] T034 [US1] Implement programs catalog page in `src/app/(public)/programs/page.tsx`: lists published programs, domain filter UI (enum select), coach filter UI (search-select populated from coach names), text search field, empty state with CTA
 - [ ] T035 [P] [US1] Implement `ProgramCard` component in `src/features/programs/components/ProgramCard.tsx`: shows title, domain badge, coach name, difficulty, session count, and "View Program" link
 - [ ] T036 [US1] Implement program detail page in `src/app/(public)/programs/[id]/page.tsx`: shows full program info + list of cohorts (dates, spots remaining, enrollment status badge, EnrollButton)
 
@@ -113,12 +114,12 @@
 - [ ] T050 [P] [US2] Implement `ProgramForm` component in `src/features/programs/components/ProgramForm.tsx`: react-hook-form + zodResolver; fields for all FR-001 attributes; status select (coach-only); learning outcomes dynamic list
 - [ ] T051 [US2] Implement coach programs list page in `src/app/(coach)/coach/programs/page.tsx`: shows own programs with status badge, edit link, create new button
 - [ ] T052 [US2] Implement create program page in `src/app/(coach)/coach/programs/new/page.tsx`: wraps `ProgramForm` for creation flow
-- [ ] T053 [US2] Implement coach program detail/edit page in `src/app/(coach)/coach/programs/[id]/page.tsx`: edit form pre-filled, status change controls, cohort list, create cohort link, exploration creation section
+- [ ] T053 [US2] Implement coach program detail/edit page in `src/app/(coach)/coach/programs/[id]/page.tsx`: edit form pre-filled, status change controls, cohort list, create cohort link (exploration creation UI added separately in T071)
 
 ### Implementation — Cohorts & Sessions
 
 - [ ] T054 [P] [US2] Create cohort Zod schemas in `src/features/cohorts/schemas/index.ts`: `createCohortSchema` (startDate, endDate, maxParticipants 1–20, sessions array); refine: `endDate > startDate`, sessions.length must equal program.sessionCount, each session.scheduledAt within cohort period
-- [ ] T055 [P] [US2] Implement `createCohort(programId, input)` server action in `src/features/cohorts/actions/create-cohort.ts`: verifies program is `PUBLISHED` and coach owns it; validates session count and date ranges via `sessionValidator` service; creates cohort + sessions in one `$transaction`; requires `cohort:create` permission
+- [ ] T055 [P] [US2] Implement `createCohort(programId, input)` server action in `src/features/cohorts/actions/create-cohort.ts`: verifies program is `PUBLISHED` and coach owns it; validates session count and date ranges via `sessionValidator` service; creates `Cohort` + `CohortSession` rows in one `$transaction`; requires `cohort:create` permission
 - [ ] T056 [P] [US2] Implement `updateCohortStatus(cohortId, status)` server action in `src/features/cohorts/actions/update-cohort-status.ts`: coach manually sets `OPEN`/`CLOSED`; ownership check; requires `cohort:manage`
 - [ ] T057 [P] [US2] Implement `getCohortDetail(cohortId)` server action in `src/features/cohorts/actions/get-cohort-detail.ts`: for coaches returns enrolled student list; for students returns session schedule + explorations
 - [ ] T058 [P] [US2] Implement `suggestSessionDates(input)` server action in `src/features/cohorts/actions/suggest-session-dates.ts`: delegates to `src/lib/session-scheduling.ts`; requires `cohort:create`; no DB write
@@ -151,7 +152,7 @@
 - [ ] T068 [P] [US3] Implement `createExploration(input)` server action in `src/features/explorations/actions/create-exploration.ts`: verifies coach owns the linked program/session; requires `exploration:create` permission; logs creation
 - [ ] T069 [P] [US3] Implement `getExplorationsForEnrolled(cohortId)` server action in `src/features/explorations/actions/get-explorations.ts`: verifies student is enrolled in cohort; returns explorations linked to cohort's program and its sessions; requires `exploration:read`
 - [ ] T070 [US3] Implement `ExplorationForm` component in `src/features/explorations/components/ExplorationForm.tsx`: react-hook-form + zodResolver; program vs. session link toggle; optional due date picker
-- [ ] T071 [US3] Integrate exploration creation UI into coach program detail page `src/app/(coach)/coach/programs/[id]/page.tsx`: expandable section listing existing explorations + add button
+- [ ] T071 [US3] Integrate exploration creation UI into coach program detail page `src/app/(coach)/coach/programs/[id]/page.tsx` (**depends on T053**): expandable section listing existing explorations + add button
 - [ ] T072 [US3] Display assigned explorations on student My Programs page `src/app/(student)/my-programs/page.tsx`: per cohort section lists explorations (title, description, due date if set, linked session label)
 - [ ] T073 [US3] Unit tests in `src/features/explorations/__tests__/explorations.test.ts`: coach ownership check (another coach's program rejected), enrollment gate (non-enrolled student denied), both `programId` and `sessionId` null rejected
 
@@ -190,7 +191,7 @@
 *Implement only after P1 and P2 flows are stable.*
 
 - [ ] T085 [P] [US5] Extend exploration Zod schemas with `submitResponseSchema` (responseText min 1, max 2000) and `addFeedbackSchema` (coachFeedback min 1, max 1000) in `src/features/explorations/schemas/index.ts`
-- [ ] T086 [P] [US5] Implement `submitExplorationResponse(explorationId, input)` server action in `src/features/explorations/actions/submit-response.ts`: requires `exploration:read` (enrolled student only); creates `ExplorationSubmission`; prevents duplicate submission (one per student per exploration)
+- [ ] T086 [P] [US5] Implement `submitExplorationResponse(explorationId, input)` server action in `src/features/explorations/actions/submit-response.ts`: gate by enrollment check (student must be enrolled in the cohort linked to the exploration); also requires `exploration:submit` permission (add to student profile in T021 seed); creates `ExplorationSubmission`; prevents duplicate submission (one per student per exploration)
 - [ ] T087 [P] [US5] Implement `addCoachFeedback(submissionId, input)` server action in `src/features/explorations/actions/add-feedback.ts`: requires `exploration:create`; coach must own the linked program; updates `ExplorationSubmission.coachFeedback`
 - [ ] T088 [US5] Implement `SubmissionForm` component in `src/features/explorations/components/SubmissionForm.tsx`: textarea + submit button; shows existing submission text if already submitted; hides form after submission
 - [ ] T089 [US5] Implement `FeedbackForm` component in `src/features/explorations/components/FeedbackForm.tsx`: coach-only textarea; shows existing feedback; inline save
@@ -211,12 +212,23 @@
 - [ ] T095 [P] Add empty state components: programs catalog (no published programs), coach programs list (no programs yet), admin cohorts (no cohorts), My Programs (not enrolled anywhere)
 - [ ] T096 Playwright E2E in `e2e/programs.spec.ts`: program status transition guards — verify Draft program not in catalog, verify ARCHIVED program not in catalog, verify Published→Draft blocked when cohort exists (coach UI shows error)
 - [ ] T097 Extend `e2e/coach-programs.spec.ts`: add test for sessionCount mismatch rejection (submit cohort with wrong session count), date out-of-range rejection
-- [ ] T098 Verify `pnpm test:ci` single command runs Vitest unit tests + Playwright E2E; update `package.json` scripts: `"test:unit"`, `"test:e2e"`, `"test:ci"` (unit + e2e sequential)
-- [ ] T099 Write `README.md` at repo root: project overview, local setup (`sh scripts/dev-setup.sh`), architecture overview, test commands (`pnpm test:ci`), seed accounts, deployment
+- [ ] T098 Verify `npm run test:ci` single command runs Vitest unit tests + Playwright E2E; confirm `package.json` scripts are defined: `"test:unit"`, `"test:e2e"`, `"test:ci"` (unit + e2e sequential)
+- [ ] T099 Write `README.md` at repo root: project overview, local setup (`sh scripts/dev-setup.sh`), architecture overview, test commands (`npm run test:ci`), seed accounts, deployment
 - [ ] T100 [P] Write `AI_USAGE.md` at repo root (required by case study): document which AI tools were used, for which tasks, what was accepted/modified
 - [ ] T101 [P] Write `PRODUCT_NOTES.md` at repo root (required by case study): product decisions, trade-offs, what would be different in a production system
 - [ ] T102 [P] Create `scripts/deploy-vercel.sh`: `vercel env pull`, `prisma migrate deploy`, `vercel --prod` (with pre-flight checks)
 - [ ] T103 Security review: audit enrollment route (capacity race condition under load), auth callbacks (token injection), all `requirePermission()` call sites, Zod coverage on every server action input; document findings in `docs/security-review.md`
+- [ ] T104 [P] Configure OpenTelemetry SDK in `src/lib/otel.ts`: install `@opentelemetry/sdk-node`, `@opentelemetry/auto-instrumentations-node`; initialize with `ConsoleSpanExporter` in development and `OTLPTraceExporter` for production; bootstrap at app startup via `instrumentation.ts` (Next.js 14+ instrumentation hook)
+- [ ] T105 [P] Implement `GET /api/metrics` route in `src/app/api/metrics/route.ts` using `prom-client`: expose counters `auth_attempts_total` (labels: type=login|register, outcome=success|failure), `programs_created_total`, `cohorts_created_total`, `enrollments_total`, `active_cohort_sessions_gauge` (recomputed on each scrape as `startDate<=today<=endDate`); restrict route to requests from `localhost` or carrying a `METRICS_TOKEN` header; add `METRICS_TOKEN` to `.env.example`
+- [ ] T106 Instrument critical request paths with OTEL spans (**depends on T104**): add named spans to `src/lib/auth.ts` jwt callback (`auth.jwt_callback`), `enrollInCohort` transaction (`enrollment.enroll`), `registerStudent` (`auth.register`), `requirePermission` on denial (`rbac.permission_denied`); inject `traceId` into all structured logger calls in `src/lib/logger.ts`; increment prom-client counters inside each instrumented function
+- [ ] T107 [P] Write `src/features/auth/README.md`: purpose, permissions involved (public for register, user:create for createUser), actions exposed (registerStudent, createUser, NextAuth route), data model touched (User, Account, Session, UserProfile), rate limiting policy, dev role switcher usage, how to test
+- [ ] T108 [P] Write `src/features/programs/README.md`: purpose, permissions (program:create, program:edit, program:read), actions exposed, status transition rules (Mermaid state diagram), sessionCount lock rationale, how to test
+- [ ] T109 [P] Write `src/features/cohorts/README.md`: purpose, permissions (cohort:create, cohort:manage, cohort:read), actions exposed, session count + date validation rules, auto-suggest algorithm formula, `CohortSession` vs NextAuth `Session` naming note, how to test
+- [ ] T110 [P] Write `src/features/enrollment/README.md`: purpose, permissions (enrollment:create), `$transaction` pattern and race condition protection, `UNIQUE(studentId, cohortId)` constraint rationale, auto-FULL transition logic, how to test
+- [ ] T111 [P] Write `src/features/explorations/README.md`: purpose, permissions (exploration:create, exploration:read, exploration:submit), coach ownership check logic, enrollment gate rationale for student access, `exploration:submit` vs `exploration:read` distinction, how to test
+- [ ] T112 [P] Write `src/features/admin/README.md`: purpose, permissions (admin:read, user:create), active cohort definition (`startDate<=today<=endDate`), period classification algorithm (UPCOMING/ACTIVE/PAST), metrics exposed, how to test
+- [ ] T113 Write architecture diagrams in `docs/` in Mermaid format: (1) `docs/context-diagram.md` — system boundary (Student/Coach/Admin actors, Next.js app, SQLite), (2) `docs/class-diagram.md` — all Prisma models + relations + key constraints, (3) `docs/sequence-enrollment.md` — enrollment flow (Student→EnrollButton→server action→$transaction→DB), (4) `docs/sequence-auth.md` — NextAuth jwt callback + RBAC enrichment, (5) `docs/architecture.md` — feature modules layer diagram (app router → features → lib → Prisma → SQLite), (6) `docs/deployment.md` — Vercel deployment diagram (Next.js runtime + SQLite volume + env config)
+- [ ] T114 Implement `useActionResult` helper in `src/lib/action-result.ts`: thin wrapper that accepts an `ActionResult<T>`; on `{ success: false }` dispatches error message to Toast (T015); on `{ success: true }` optionally dispatches a success toast; integrate into `RegisterForm`, `ProgramForm`, `CohortForm`, `EnrollButton`, and all admin forms to replace per-component error handling boilerplate
 
 ---
 
@@ -224,14 +236,14 @@
 
 ```
 Phase 1 (Setup)
-    └── Phase 2 (Foundation/Auth)
+    └── Phase 2 (Foundation/Auth + T030b Rate Limiting)
             └── Phase 3 (US1 — Student Enrollment) 🎯 MVP
             └── Phase 4 (US2 — Coach Programs/Cohorts)
                     └── Phase 3 fully usable end-to-end (real published programs)
                             ├── Phase 5 (US3 — Explorations)
                             └── Phase 6 (US4 — Admin Dashboard)
                                     └── Phase 7 (US5 — Bonus Submissions/Feedback)
-                                                └── Final Phase (Polish & Deliverables)
+                                                └── Final Phase (Polish, OTEL, READMEs, Diagrams, Deliverables)
 ```
 
 **Phase 3 and Phase 4 share a dependency**: Phase 3 (read side) can be developed against seeded data; Phase 4 (write side) must complete before full end-to-end flows without seed data are possible.
@@ -253,7 +265,7 @@ Tasks marked `[P]` within the same phase can be executed concurrently (they targ
 | Phase 5 | T067, T068, T069 (schemas + actions) |
 | Phase 6 | T074, T075, T076, T077 (actions + types) \| T079, T081 (UI components) |
 | Phase 7 | T085, T086, T087 (bonus schemas + actions) |
-| Final   | T100, T101, T102 (docs + deploy script) |
+| Final   | T100, T101, T102 (docs + deploy script) \| T104, T105 (OTel + metrics) \| T107–T112 (feature READMEs) |
 
 ---
 
@@ -273,13 +285,13 @@ Tasks marked `[P]` within the same phase can be executed concurrently (they targ
 
 | Metric | Value |
 |---|---|
-| **Total tasks** | 103 |
-| **Setup (Phases 1–2)** | 30 tasks |
+| **Total tasks** | 115 |
+| **Setup (Phases 1–2 incl. T030b)** | 31 tasks |
 | **US1 — Student enrollment (P1)** | 14 tasks |
 | **US2 — Coach programs/cohorts (P1)** | 23 tasks |
 | **US3 — Explorations (P2)** | 7 tasks |
 | **US4 — Admin dashboard (P2)** | 11 tasks |
 | **US5 — Submissions/feedback (P3)** | 8 tasks |
-| **Polish & deliverables** | 11 tasks |
-| **Parallelizable tasks** | 53 tasks (`[P]`) |
+| **Polish & deliverables (incl. T104–T114)** | 22 tasks |
+| **Parallelizable tasks** | 60 tasks (`[P]`) |
 | **MVP scope** | Phases 1–3 (T001–T044) |
