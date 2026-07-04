@@ -1,0 +1,24 @@
+[
+  {
+    "title": "Finance Fundamentals Immersion",
+    "description": "A hands-on program designed to give students real-world exposure to core finance concepts through immersive sessions and practical explorations.",
+    "domain": "FINANCE",
+    "targetAudience": "University students interested in finance careers",
+    "difficultyLevel": "BEGINNER",
+    "sessionCount": 3,
+    "recommendedCohortSize": 5,
+    "maxCohortSize": 10,
+    "learningOutcomes": [
+      "Understand financial statements",
+      "Apply DCF valuation basics",
+      "Navigate investment banking workflows"
+    ],
+    "status": "PUBLISHED",
+    "cohort": {
+      "startDate": "+7days",
+      "endDate": "+28days",
+      "maxParticipants": 10,
+      "enrollmentStatus": "OPEN"
+    }
+  }
+]
