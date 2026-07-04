@@ -28,6 +28,18 @@
 
 ---
 
+## Clarifications
+
+### Session 2026-07-04
+
+- Q: What are the allowed program status transitions, and what happens when archiving a program with active enrollments? → A: Option B — unidirectional with guard: `Draft → Published → Archived` only; `Published → Draft` is allowed only if no cohort has been created yet; archiving is blocked if any cohort has active enrollments — the coach must close all cohorts first.
+- Q: How should concurrent enrollment attempts be protected against race conditions and duplicates? → A: Option A — DB-level `UNIQUE(studentId, cohortId)` constraint on `Enrollment` table + capacity check inside a Prisma `$transaction`. The DB rejects any duplicate at the constraint level; the application catches the error and surfaces a clear user message.
+- Q: Is student self-registration in scope, and how are coach/admin accounts created? → A: Public `/register` page for students (email + password), account auto-assigned to Student profile. Coaches and admins are created via `create-user.sh`, seed scripts, OR through a dedicated admin interface (user management section within `/admin`).
+- Q: What is the definition of "active cohort" for the admin dashboard metric? → A: `startDate <= today <= endDate` regardless of enrollment status. Additionally, the admin MUST have access to a full cohorts view (separate page or expandable section) showing all cohorts with their individual status (Open / Full / Closed) and period (upcoming / active / past).
+- Q: Can a single user hold multiple profiles (e.g., be both Coach and Student)? → A: No — one profile per user, enforced by a `UNIQUE(userId)` constraint on `UserProfile`. A coach who wants to participate as a student must create a separate account. Constitution upheld.
+
+---
+
 ### User Story 1 — Student browses and enrolls in a program cohort (Priority: P1)
 
 A student logs in, browses the list of published Job Immersion Programs, filters by domain or coach, opens a program detail page to see available cohorts with their dates and remaining spots, and enrolls in one open cohort. After enrollment, the student lands on "My Programs" where they can see the program, the coach, cohort dates, the session schedule, and any assigned Explorations.
@@ -87,13 +99,14 @@ A Nebula admin logs in and views a dashboard displaying key operational metrics:
 
 **Why this priority**: Operational visibility is required but does not block student or coach workflows.
 
-**Independent Test**: Seed the database with programs, cohorts, enrollments. Verify each metric on the dashboard matches the seeded counts.
+**Independent Test**: Seed the database with programs, cohorts (upcoming, active, past), enrollments. Verify each metric on the dashboard matches the seeded counts, and verify the full cohorts view at `/admin/cohorts` lists all cohorts with correct status and period classification.
 
 **Acceptance Scenarios**:
 
-1. **Given** an admin user, **When** they access `/admin`, **Then** they see all required metrics with correct counts.
+1. **Given** an admin user, **When** they access `/admin`, **Then** they see all required metrics with correct counts, where "active cohorts" means cohorts whose `startDate <= today <= endDate`.
 2. **Given** a non-admin user (student or coach), **When** they attempt to access `/admin`, **Then** they are redirected and access is denied.
 3. **Given** a new enrollment just created, **When** the admin refreshes the dashboard, **Then** the enrollment appears in "Latest Enrollments" and the total count is incremented.
+4. **Given** an admin on the dashboard, **When** they navigate to `/admin/cohorts`, **Then** they see all cohorts across all programs with their status (Open / Full / Closed) and period (Upcoming / Active / Past).
 
 ---
 
@@ -114,9 +127,9 @@ A student submits a short text response to an assigned Exploration. The coach ca
 
 ### Edge Cases
 
-- What happens when a cohort reaches capacity during concurrent enrollments? (race condition — use a database-level transaction or unique constraint to prevent over-enrollment)
+- What happens when a cohort reaches capacity during concurrent enrollments? Resolved: a DB-level `UNIQUE(studentId, cohortId)` constraint on `Enrollment` combined with a Prisma `$transaction` that checks remaining capacity before inserting. The constraint is the final safety net; the transaction prevents over-enrollment.
 - What happens when a coach tries to create a cohort for a Draft or Archived program? → must be rejected; only Published programs accept cohorts.
-- What happens when a coach deletes or archives a program that has enrolled students? → enrolled students must be notified or the action must be blocked.
+- What happens when a coach deletes or archives a program that has enrolled students? → Archiving is **blocked** if any cohort has active enrollments. The error message MUST list the blocking cohorts. The coach must set those cohorts to Closed before archiving the program.
 - What happens when `sessionCount` is changed on a program that already has cohorts? → must be prevented or cohorts must be re-validated.
 - What happens when a student tries to enroll in a Closed cohort? → rejected with status-specific message.
 - What happens with an empty program catalog? → clear empty state with a call-to-action.
@@ -131,8 +144,12 @@ A student submits a short text response to an assigned Exploration. The coach ca
 
 - **FR-001**: A coach MUST be able to create a program with: title, description, domain (enum), target audience (free text or enum), difficulty level (Beginner / Intermediate / Advanced), session count (integer, 2–4), recommended cohort size (default 3), maximum cohort size (1–20), learning outcomes (list), and status (Draft / Published / Archived).
 - **FR-002**: Only Published programs MUST be visible to students. Draft and Archived programs are only visible to their owning coach and admins.
-- **FR-003**: A coach MUST be able to edit basic program information (title, description, status, outcomes).
+- **FR-003**: A coach MUST be able to edit basic program information (title, description, outcomes). Status transitions
+  follow a strict unidirectional flow: `Draft → Published → Archived`. A Published program MAY be reverted to Draft
+  ONLY if no cohort has been created for it yet. Once a cohort exists, the program is locked at Published or above.
 - **FR-004**: A coach MUST NOT be able to change `sessionCount` on a program that already has associated cohorts.
+- **FR-004b**: A coach MUST NOT be able to Archive a program while any of its cohorts has at least one active
+  enrollment. The system MUST surface a blocking error listing the cohorts that must be closed first.
 
 **Cohorts**
 
@@ -151,6 +168,9 @@ A student submits a short text response to an assigned Exploration. The coach ca
 **Enrollment**
 
 - **FR-013**: A student MUST be able to enroll in an Open cohort (enrollment status = Open and slots remaining).
+  The enrollment MUST be executed inside a Prisma `$transaction` that (1) re-checks remaining capacity and
+  (2) inserts the `Enrollment` row. A DB-level `UNIQUE(studentId, cohortId)` constraint MUST exist as the
+  final safety net against race conditions.
 - **FR-014**: A student MUST NOT be able to enroll twice in the same cohort.
 - **FR-015**: A student MUST NOT be able to enroll in a Full or Closed cohort.
 - **FR-016**: After enrollment, the student MUST see on "My Programs": program title, coach name, cohort dates, session schedule, enrolled participant count, and any assigned Explorations.
@@ -164,7 +184,12 @@ A student submits a short text response to an assigned Exploration. The coach ca
 
 **Admin Dashboard**
 
-- **FR-021**: An admin MUST see: total programs, published programs count, active cohorts count, total enrollments, total students, total coaches, upcoming sessions (next 7 days), latest enrollments (most recent 10).
+- **FR-021**: An admin MUST see on the main dashboard: total programs, published programs count, **active cohorts
+  count** (`startDate <= today <= endDate`), total enrollments, total students, total coaches, upcoming sessions
+  (next 7 days), latest enrollments (most recent 10).
+- **FR-021b**: An admin MUST have access to a full cohorts view (accessible from the dashboard, e.g. `/admin/cohorts`)
+  listing ALL cohorts across all programs, each showing: program name, coach name, start date, end date, enrollment
+  status (Open / Full / Closed), period classification (Upcoming / Active / Past), and enrolled participant count.
 - **FR-022**: Access to `/admin` MUST be restricted to users with the Admin profile.
 
 **Authentication & Authorization**
@@ -176,15 +201,24 @@ A student submits a short text response to an assigned Exploration. The coach ca
   In development/testing environments, a **dev role switcher** UI component (gated by `NODE_ENV === 'development'`)
   MAY be displayed: it calls `signIn()` on behalf of a pre-seeded DB account with one click, enabling fast role
   switching without re-entering credentials.
+- **FR-023b**: A public `/register` page MUST allow any visitor to create a Student account (email + password).
+  The account MUST be automatically assigned the Student profile upon creation. Email uniqueness MUST be enforced
+  at the DB level; a clear error MUST be shown if the email is already registered.
+- **FR-023c**: Coach and Admin accounts MUST NOT be self-registered publicly. They MUST be created via one of:
+  (1) the `create-user.sh` script, (2) the seed script, or (3) an admin user management interface accessible
+  only to users with the Admin profile (within `/admin/users`).
 - **FR-024**: All server actions and API routes MUST verify the user's session and permission before executing any business logic.
 - **FR-025**: Coaches MUST only be able to manage their own programs and cohorts. A coach MUST NOT access another coach's programs.
+- **FR-026**: Each user MUST have exactly one profile. Multi-profile assignment MUST be rejected at the DB level
+  via a `UNIQUE(userId)` constraint on `UserProfile`. A coach who wishes to participate as a student must
+  register a separate student account.
 
 ### Key Entities
 
 - **User**: base identity — id, name, email, hashed password, created/updated timestamps.
 - **Profile**: named collection of permissions — id, name (Student / Coach / Admin).
 - **Permission**: atomic access grant — id, resource, action (e.g. `program:create`, `cohort:manage`, `enrollment:create`, `admin:read`).
-- **UserProfile**: join table linking User → Profile.
+- **UserProfile**: join table linking User → Profile, with `UNIQUE(userId)` constraint enforcing one profile per user.
 - **ProfilePermission**: join table linking Profile → Permission.
 - **UserPermission**: join table for individual overrides (User → Permission) — **optional, planned for v2**.
 - **Program**: id, title, description, domain, targetAudience, difficultyLevel, sessionCount, recommendedCohortSize, maxCohortSize, learningOutcomes (JSON array), status, coachId (FK → User), timestamps.
@@ -225,7 +259,8 @@ A student submits a short text response to an assigned Exploration. The coach ca
 - **Mobile**: Responsive layout is expected (Tailwind CSS), but no native mobile app is in scope.
 - **Notifications**: Email or push notifications for enrollment confirmation are out of scope for v1.
 - **Program deletion**: Deleting a program that has active enrollments is out of scope for v1; the coach may Archive it instead.
-- **Coach onboarding**: Coach accounts are created via `create-user.sh` or the seed script; there is no self-registration flow for coaches in v1.
+- **Coach onboarding**: Coach and Admin accounts are created via `create-user.sh`, the seed script, or the admin
+  user management interface (`/admin/users`). There is no public self-registration flow for coaches or admins.
 - **Automatic session scheduling** (FR-012 Bonus): evenly distributed dates will be pre-calculated and offered as editable suggestions, not forced.
 
 ---

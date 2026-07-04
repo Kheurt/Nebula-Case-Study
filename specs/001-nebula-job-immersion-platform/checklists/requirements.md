@@ -31,6 +31,11 @@
 
 ## Notes
 
-- 3 conflicts between the PDF requirements and the Constitution are documented at the bottom of spec.md — decisions required from user before planning begins.
-- Conflict #1 (auth mechanism), Conflict #2 (RBAC depth), Conflict #3 (testing scope) each offer 3 options (A/B/C).
-- Once decisions are made, the spec can proceed directly to `/speckit.plan`.
+- All 5 clarification questions answered on 2026-07-04. Spec is fully resolved — no outstanding ambiguities.
+- Decisions recorded:
+  1. Program status lifecycle: unidirectional with guard (Draft→Published→Archived; Published→Draft only if no cohorts; archiving blocked by active enrollments).
+  2. Concurrent enrollment: `UNIQUE(studentId, cohortId)` + Prisma `$transaction`.
+  3. Student registration: public `/register`; coaches/admins via scripts or admin UI.
+  4. "Active cohort" definition: `startDate <= today <= endDate`; full cohorts view at `/admin/cohorts`.
+  5. Profile cardinality: one profile per user, `UNIQUE(userId)` on `UserProfile`.
+- Ready to proceed to `/speckit.plan`.
