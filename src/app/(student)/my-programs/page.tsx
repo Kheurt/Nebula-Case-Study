@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { getMyEnrollments } from '@/features/enrollment/actions/get-my-enrollments';
 import { Badge } from '@/components/ui/Badge';
 import { SubmissionForm } from '@/features/explorations/components/SubmissionForm';
-import { format } from 'date-fns';
+import { formatDate, formatDateShort, formatDateRange } from '@/lib/date-format';
 import Link from 'next/link';
 import { StatCard } from '@/components/dashboard/StatCard';
 
@@ -86,7 +86,7 @@ export default async function MyProgramsPage() {
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900">{e.programTitle}</h2>
                   <p className="text-sm text-gray-500 mt-0.5">
-                    Coach: {e.coachName} · {format(new Date(e.startDate), 'MMM d')} – {format(new Date(e.endDate), 'MMM d, yyyy')} · {e.enrolledCount} enrolled
+                    Coach: {e.coachName} · {formatDateRange(e.startDate, e.endDate)} · {e.enrolledCount} enrolled
                   </p>
                 </div>
                 <Badge
@@ -116,7 +116,7 @@ export default async function MyProgramsPage() {
                       {e.sessions.map((s) => (
                         <div key={s.id} className="flex items-center gap-4 rounded-lg bg-gray-50 px-4 py-2.5 text-sm">
                           <span className="font-semibold text-blue-600 w-20 shrink-0">
-                            {format(new Date(s.scheduledAt), 'MMM d')}
+                            {formatDateShort(s.scheduledAt)}
                           </span>
                           <span className="text-gray-900 flex-1">{s.title}</span>
                           <span className="text-gray-400 text-xs">{s.durationMinutes} min</span>
@@ -145,7 +145,7 @@ export default async function MyProgramsPage() {
                             </div>
                             {exp.dueDate && (
                               <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-md border border-gray-200 shrink-0">
-                                Due: {format(new Date(exp.dueDate), 'MMM d, yyyy')}
+                                Due: {formatDate(exp.dueDate)}
                               </span>
                             )}
                           </div>

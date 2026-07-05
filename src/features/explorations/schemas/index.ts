@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const createExplorationSchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
-  dueDate: z.string().datetime().optional(),
+  dueDate: z.string().refine((v) => !isNaN(Date.parse(v)), { message: 'Invalid date' }).optional(),
   programId: z.string().optional(),
   sessionId: z.string().optional(),
 }).refine(

@@ -10,6 +10,7 @@ import { updateProgram } from '@/features/programs/actions/update-program';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
+import { useToast } from '@/components/ui/ToastProvider';
 
 interface ProgramFormProps {
   programId?: string;
@@ -18,6 +19,7 @@ interface ProgramFormProps {
 
 export function ProgramForm({ programId, defaultValues }: ProgramFormProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
 
   const {
@@ -53,9 +55,11 @@ export function ProgramForm({ programId, defaultValues }: ProgramFormProps) {
       : await createProgram(data);
 
     if (result.success) {
+      toast(programId ? 'Program saved successfully.' : 'Program created successfully.', 'success');
       router.push(`/coach/programs/${result.data.programId}`);
       router.refresh();
     } else {
+      toast(result.error, 'error');
       setError(result.error);
     }
   }

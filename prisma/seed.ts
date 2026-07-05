@@ -65,7 +65,10 @@ async function main() {
     'cohort:create', 'cohort:manage', 'cohort:read',
     'exploration:create', 'exploration:read',
   ];
-  const adminPerms = ['admin:read', 'user:create'];
+  const adminPerms = [
+    'admin:read', 'user:create',
+    'program:read', 'cohort:read', 'exploration:read',
+  ];
 
   async function linkPerms(profileId: string, actions: string[]) {
     for (const action of actions) {

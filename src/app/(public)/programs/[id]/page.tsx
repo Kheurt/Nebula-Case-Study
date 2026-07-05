@@ -3,7 +3,19 @@ import { getProgramDetail } from '@/features/programs/actions/get-program-detail
 import { EnrollButton } from '@/features/enrollment/components/EnrollButton';
 import { PageShell } from '@/components/layout/PageShell';
 import { Badge } from '@/components/ui/Badge';
-import { format } from 'date-fns';
+import { formatDateRange } from '@/lib/date-format';
+
+function getCohortDisplayStatus(enrollmentStatus: string, startDate: string | Date, endDate: string | Date) {
+  const now = new Date();
+  const end = new Date(endDate);
+  const start = new Date(startDate);
+
+  if (end < now) return { label: 'ENDED', variant: 'gray' as const };
+  if (start > now && enrollmentStatus === 'OPEN') return { label: 'UPCOMING', variant: 'blue' as const };
+  if (enrollmentStatus === 'FULL') return { label: 'FULL', variant: 'red' as const };
+  if (enrollmentStatus === 'OPEN') return { label: 'OPEN', variant: 'green' as const };
+  return { label: enrollmentStatus, variant: 'gray' as const };
+}
 
 const DOMAIN_GRADIENTS: Record<string, string> = {
   FINANCE: 'from-emerald-500 to-teal-600',
@@ -120,27 +132,21 @@ export default async function ProgramDetailPage({ params }: ProgramDetailPagePro
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {program.cohorts.map((cohort) => (
+                    {program.cohorts.map((cohort) => {
+                      const status = getCohortDisplayStatus(cohort.enrollmentStatus, cohort.startDate, cohort.endDate);
+                      return (
                       <div key={cohort.id} className="rounded-lg border border-gray-200 p-4 space-y-3 hover:border-blue-200 transition-colors">
                         <div className="flex justify-between items-start">
                           <div>
                             <p className="text-sm font-semibold text-gray-900">
-                              {format(new Date(cohort.startDate), 'MMM d')} – {format(new Date(cohort.endDate), 'MMM d, yyyy')}
+                              {formatDateRange(cohort.startDate, cohort.endDate)}
                             </p>
                             <p className="text-xs text-gray-500 mt-0.5">
                               {cohort.remainingSlots} / {cohort.maxParticipants} spots remaining
                             </p>
                           </div>
-                          <Badge
-                            variant={
-                              cohort.enrollmentStatus === 'OPEN'
-                                ? 'green'
-                                : cohort.enrollmentStatus === 'FULL'
-                                  ? 'red'
-                                  : 'gray'
-                            }
-                          >
-                            {cohort.enrollmentStatus}
+                          <Badge variant={status.variant}>
+                            {status.label}
                           </Badge>
                         </div>
                         {/* Progress bar */}
@@ -154,9 +160,10 @@ export default async function ProgramDetailPage({ params }: ProgramDetailPagePro
                             }}
                           />
                         </div>
-                        <EnrollButton cohortId={cohort.id} enrollmentStatus={cohort.enrollmentStatus} />
+                        <EnrollButton cohortId={cohort.id} enrollmentStatus={cohort.enrollmentStatus} startDate={cohort.startDate.toString()} endDate={cohort.endDate.toString()} />
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

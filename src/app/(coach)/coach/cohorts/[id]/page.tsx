@@ -7,21 +7,24 @@ import { PageShell } from '@/components/layout/PageShell';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { FeedbackForm } from '@/features/explorations/components/FeedbackForm';
+import { CohortStatusToggle } from '@/features/cohorts/components/CohortStatusToggle';
+import { formatDateRange, formatDate } from '@/lib/date-format';
 import Link from 'next/link';
 
 export default async function CoachCohortDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
   if (!session) redirect('/login');
 
-  const result = await getCohortDetail(params.id);
+  const result = await getCohortDetail(id);
   if (!result.success) notFound();
 
   const cohort = result.data;
-  const explorationsResult = await getExplorationsForCoach(params.id);
+  const explorationsResult = await getExplorationsForCoach(id);
   const explorations = explorationsResult.success ? explorationsResult.data : [];
   const now = new Date();
   const isActive =
@@ -39,9 +42,11 @@ export default async function CoachCohortDetailPage({
             {isActive && <Badge variant="blue">ACTIVE</Badge>}
           </div>
           <p className="text-sm text-gray-500 mt-1">
-            {new Date(cohort.startDate).toLocaleDateString()} –{' '}
-            {new Date(cohort.endDate).toLocaleDateString()}
+            {formatDateRange(cohort.startDate, cohort.endDate)}
           </p>
+          <div className="mt-2">
+            <CohortStatusToggle cohortId={cohort.id} currentStatus={cohort.enrollmentStatus} />
+          </div>
         </div>
         <Link href={`/coach/programs/${cohort.programId}`} className="text-sm text-blue-600 hover:underline">
           ← Back to Program
@@ -64,7 +69,7 @@ export default async function CoachCohortDetailPage({
                         <p className="text-xs text-gray-500">{s.description}</p>
                       </div>
                       <div className="text-right text-sm text-gray-500">
-                        <p>{new Date(s.scheduledAt).toLocaleDateString()}</p>
+                        <p>{formatDate(s.scheduledAt)}</p>
                         <p>{s.durationMinutes} min</p>
                       </div>
                     </div>

@@ -95,7 +95,7 @@ export async function getExplorationsForCoach(
   cohortId: string,
 ): Promise<ActionResult<CoachExplorationItem[]>> {
   const session = await getServerSession(authOptions);
-  requirePermission(session, 'exploration:create');
+  requirePermission(session, 'exploration:read');
 
   try {
     const cohort = await prisma.cohort.findUnique({

@@ -6,19 +6,22 @@ import { getCoachPrograms } from '@/features/programs/actions/get-coach-programs
 import { ProgramForm } from '@/features/programs/components/ProgramForm';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { ProgramStatusActions } from '@/features/programs/components/ProgramStatusActions';
+import { formatDate } from '@/lib/date-format';
 import type { DOMAINS, DIFFICULTY_LEVELS } from '@/features/programs/schemas';
 import Link from 'next/link';
 
 export default async function CoachProgramDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
   if (!session) redirect('/login');
 
   const [detailResult, coachResult] = await Promise.all([
-    getProgramDetail(params.id),
+    getProgramDetail(id),
     getCoachPrograms(),
   ]);
 
@@ -29,6 +32,11 @@ export default async function CoachProgramDetailPage({
     redirect('/coach/programs');
   }
 
+  const hasCohorts = program.cohorts.length > 0;
+  const hasActiveEnrollments = program.cohorts.some(
+    (c) => c.enrollmentStatus === 'OPEN' || c.enrollmentStatus === 'FULL',
+  );
+
   const statusStyles: Record<string, string> = {
     DRAFT: 'bg-amber-50 text-amber-700',
     PUBLISHED: 'bg-emerald-50 text-emerald-700',
@@ -38,11 +46,21 @@ export default async function CoachProgramDetailPage({
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-gray-900">{program.title}</h1>
-          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${statusStyles[program.status] ?? 'bg-gray-100 text-gray-600'}`}>
-            {program.status}
-          </span>
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-gray-900">{program.title}</h1>
+            <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${statusStyles[program.status] ?? 'bg-gray-100 text-gray-600'}`}>
+              {program.status}
+            </span>
+          </div>
+          <div className="mt-3">
+            <ProgramStatusActions
+              programId={program.id}
+              currentStatus={program.status}
+              hasCohorts={hasCohorts}
+              hasActiveEnrollments={hasActiveEnrollments}
+            />
+          </div>
         </div>
         <Link href="/coach/programs">
           <Button variant="ghost" size="sm">← Back</Button>
@@ -95,7 +113,7 @@ export default async function CoachProgramDetailPage({
                   {program.cohorts.map((c) => (
                     <li key={c.id} className="flex justify-between items-center rounded-lg bg-gray-50 px-4 py-3 text-sm">
                       <div>
-                        <p className="font-medium text-gray-900">{new Date(c.startDate).toLocaleDateString()}</p>
+                        <p className="font-medium text-gray-900">{formatDate(c.startDate)}</p>
                         <p className="text-xs text-gray-500">{c.enrolledCount}/{c.maxParticipants} enrolled</p>
                       </div>
                       <Link href={`/coach/cohorts/${c.id}`} className="text-blue-600 hover:text-blue-700 text-xs font-medium">

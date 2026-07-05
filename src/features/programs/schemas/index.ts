@@ -25,6 +25,12 @@ export const createProgramSchema = z.object({
 export const updateProgramSchema = z.object({
   title: z.string().min(3).max(120).optional(),
   description: z.string().min(10).optional(),
+  domain: z.enum(DOMAINS).optional(),
+  targetAudience: z.string().min(1).optional(),
+  difficultyLevel: z.enum(DIFFICULTY_LEVELS).optional(),
+  sessionCount: z.number().int().min(2).max(4).optional(),
+  recommendedCohortSize: z.number().int().min(1).max(20).optional(),
+  maxCohortSize: z.number().int().min(1).max(20).optional(),
   learningOutcomes: z.array(z.string().min(1)).min(1).optional(),
   status: z.enum(PROGRAM_STATUSES).optional(),
 });

@@ -9,6 +9,7 @@ import { createCohort } from '@/features/cohorts/actions/create-cohort';
 import { suggestSessionDates } from '@/features/cohorts/actions/suggest-session-dates';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { useToast } from '@/components/ui/ToastProvider';
 
 interface CohortFormProps {
   programId: string;
@@ -17,6 +18,7 @@ interface CohortFormProps {
 
 export function CohortForm({ programId, sessionCount }: CohortFormProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
   const [suggesting, setSuggesting] = useState(false);
 
@@ -51,7 +53,9 @@ export function CohortForm({ programId, sessionCount }: CohortFormProps) {
     const result = await suggestSessionDates({ startDate, endDate, sessionCount });
     if (result.success) {
       result.data.forEach((date, i) => {
-        setValue(`sessions.${i}.scheduledAt`, date);
+        // datetime-local inputs need "yyyy-MM-ddTHH:mm" format, not full ISO
+        const local = date.replace(/:\d{2}\.\d{3}Z$/, '').replace(/Z$/, '');
+        setValue(`sessions.${i}.scheduledAt`, local);
       });
     }
     setSuggesting(false);
@@ -61,9 +65,11 @@ export function CohortForm({ programId, sessionCount }: CohortFormProps) {
     setError(null);
     const result = await createCohort(programId, data);
     if (result.success) {
-      router.push(`/coach/cohorts/${result.data.cohortId}`);
+      toast('Cohort created successfully.', 'success');
+      router.push(`/coach/programs/${programId}`);
       router.refresh();
     } else {
+      toast(result.error, 'error');
       setError(result.error);
     }
   }

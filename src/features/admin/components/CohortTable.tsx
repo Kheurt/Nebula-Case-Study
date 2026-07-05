@@ -1,5 +1,6 @@
 import { CohortRow } from '@/features/admin/services/types';
 import { Badge } from '@/components/ui/Badge';
+import { formatDateRange } from '@/lib/date-format';
 import Link from 'next/link';
 
 interface Props {
@@ -46,8 +47,7 @@ export function CohortTable({ cohorts }: Props) {
               </td>
               <td className="py-2 pr-4 text-gray-700">{c.coachName}</td>
               <td className="py-2 pr-4 text-gray-500">
-                {new Date(c.startDate).toLocaleDateString()} –{' '}
-                {new Date(c.endDate).toLocaleDateString()}
+                {formatDateRange(c.startDate, c.endDate)}
               </td>
               <td className="py-2 pr-4">
                 <Badge variant={statusColors[c.enrollmentStatus] ?? 'default'}>

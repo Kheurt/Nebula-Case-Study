@@ -59,6 +59,10 @@ export async function enrollInCohort(cohortId: string): Promise<ActionResult<{ e
     if (prismaErr?.code === 'P2002') {
       return { success: false, error: 'You are already enrolled in this cohort', code: 'ALREADY_ENROLLED' };
     }
+    // P2003 = foreign key constraint violation = stale session (user no longer in DB)
+    if (prismaErr?.code === 'P2003') {
+      return { success: false, error: 'Your session is invalid. Please sign out and sign back in.', code: 'SESSION_INVALID' };
+    }
 
     logger.error('enrollInCohort error', { studentId, cohortId, error: message });
     return { success: false, error: 'Enrollment failed. Please try again.', code: 'INTERNAL_ERROR' };

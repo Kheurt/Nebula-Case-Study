@@ -1,5 +1,6 @@
 import { DashboardStats } from '@/features/admin/services/types';
 import { StatCard } from '@/components/dashboard/StatCard';
+import { formatDate } from '@/lib/date-format';
 
 interface Props {
   stats: DashboardStats;
@@ -117,7 +118,7 @@ export function DashboardStatsGrid({ stats }: Props) {
                   <tr key={e.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-3.5 font-medium text-gray-900">{e.studentName}</td>
                     <td className="px-6 py-3.5 text-gray-600">{e.programTitle}</td>
-                    <td className="px-6 py-3.5 text-gray-500">{new Date(e.enrolledAt).toLocaleDateString()}</td>
+                    <td className="px-6 py-3.5 text-gray-500">{formatDate(e.enrolledAt)}</td>
                   </tr>
                 ))}
               </tbody>

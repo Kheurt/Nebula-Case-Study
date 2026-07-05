@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { listUsers } from '@/features/admin/actions/list-users';
 import { Badge } from '@/components/ui/Badge';
+import { formatDate } from '@/lib/date-format';
 
 const profileColors: Record<string, 'blue' | 'green' | 'purple'> = {
   student: 'blue',
@@ -54,7 +55,7 @@ export default async function AdminUsersPage() {
                   <td className="px-6 py-3.5">
                     <Badge variant={profileColors[u.profileName] ?? 'default'}>{u.profileName}</Badge>
                   </td>
-                  <td className="px-6 py-3.5 text-gray-500">{new Date(u.createdAt).toLocaleDateString()}</td>
+                  <td className="px-6 py-3.5 text-gray-500">{formatDate(u.createdAt)}</td>
                 </tr>
               ))}
             </tbody>

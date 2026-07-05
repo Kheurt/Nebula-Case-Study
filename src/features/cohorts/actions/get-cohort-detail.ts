@@ -52,7 +52,7 @@ export async function getCohortDetail(cohortId: string): Promise<ActionResult<Co
       return { success: false, error: 'Cohort not found', code: 'NOT_FOUND' };
     }
 
-    const isCoach = session?.user?.profileName === 'coach';
+    const canSeeEnrollments = session?.user?.profileName === 'coach' || session?.user?.profileName === 'admin';
     const result: CohortDetail = {
       id: cohort.id,
       programId: cohort.program.id,
@@ -62,7 +62,7 @@ export async function getCohortDetail(cohortId: string): Promise<ActionResult<Co
       maxParticipants: cohort.maxParticipants,
       enrollmentStatus: cohort.enrollmentStatus,
       sessions: cohort.sessions,
-      ...(isCoach
+      ...(canSeeEnrollments
         ? {
             enrollments: cohort.enrollments.map((e) => ({
               id: e.id,
