@@ -1,8 +1,45 @@
 # WHAT I DID With AI
 
-1. I setup a prompt to prepare the main AI agent with rules that the ai model must follow to archive the delivery
-2. I setup Speckit with specifications of the Nebula Case Study, I implement software solutions with the SDD approach
-3. I clarified ambiguous features until everything in the feature is clear for implementations, but also clarified rules/behaviours of the environment, which are development contrainsts
-4. Build a development plan and implementations tasks with speckit
-5. Fix integration issues between Prisma and SQLite
-6. Fix frontend layout by absorbing opensource templates of NextJs: https://nextjs-demo.tailadmin.com/ and https://e-learning-tailwind-nextjs-free.vercel.app/
+## Examples where AI helped me move fast
+- Generate code/layout
+- Choose Design System
+- Setup Design Pattern
+
+## Example where AI gave you something wrong, incomplete, or risky
+- Date format: ISO 8601 date instead of datetime-local
+- Design system issues: white text over white background, dark text over dark background
+- KPIs count issues on dashboard (probably not calculated than wrong calcul)
+
+## How you reviewed and validated the final code
+- Fist, I setup e2e tests with playwright, but as the time to review each use case was short, I decided not to care about them and perform tests myself directly
+- The design pattern was reviewed by review folder structure and architecture diagrams
+
+## Which parts of the implementation you personally checked most carefully
+- The architecture
+- The e2e tests' results
+
+# For Product Note
+
+## What did you prioritize and why?
+- The authentication and access rules (RBAC)
+- The User Experience
+
+## What did you intentionally not build?
+- Registration confirmation
+- Notifications
+- Admin/Coach search features in their dashboards
+- Profile pages
+- User management's features for Admin
+
+## What would you improve with one more week?
+One of the following options:
+- Admin/Coach search features in their dashboards
+- Profile pages
+- User management's features for Admin
+
+## What would you measure after launching this feature?
+Which feature? The feature implemented in one week or the whole project as a feature? If it is the one week implementation, It depends on the business orientation, as the app is new, the only KPI I could measure as the Support is the failure percentage of each feature
+
+## What would make this feature valuable for Nebula’s students and coaches?
+- The value of advanced search features is that it help very well when the database has a lot of records
+- User management's features help the admin to support user and troubleshooter when issues comes

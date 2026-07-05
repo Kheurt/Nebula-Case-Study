@@ -1,5 +1,31 @@
 # Product Notes — Nebula Job Immersion Platform
 
+## Questions Answers
+
+### What did you prioritize and why?
+- The authentication and access rules (RBAC)
+- The User Experience
+
+### What did you intentionally not build?
+- Registration confirmation
+- Notifications
+- Admin/Coach search features in their dashboards
+- Profile pages
+- User management's features for Admin
+
+### What would you improve with one more week?
+One of the following options:
+- Admin/Coach search features in their dashboards
+- Profile pages
+- User management's features for Admin
+
+### What would you measure after launching this feature?
+Which feature? The feature implemented in one week or the whole project as a feature? If it is the one week implementation, It depends on the business orientation, as the app is new, the only KPI I could measure as the Support is the failure percentage of each feature
+
+### What would make this feature valuable for Nebula’s students and coaches?
+- The value of advanced search features is that it help very well when the database has a lot of records
+- User management's features help the admin to support user and troubleshooter when issues comes
+
 ## Design Decisions
 
 ### RBAC: Profile-Based Permissions
