@@ -42,6 +42,6 @@ If no test command is present, describe how to run any manual checks in your PR 
 Security disclosures
 
 If you discover a security vulnerability, please report it privately to the maintainers at
-krys.tedongmouo@orange.com rather than opening a public issue.
+krystedongmouo@gmail.com rather than opening a public issue.
 
 Thank you for helping make this project better!

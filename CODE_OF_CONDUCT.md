@@ -6,7 +6,7 @@ community members to be respectful, inclusive, and constructive.
 Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be reported by contacting
-the project maintainers at: krys.tedongmouo@orange.com. All reports will be handled with
+the project maintainers at: krystedongmouo@gmail.com. All reports will be handled with
 confidentiality and care.
 
 If you have questions about this policy or how it is enforced, please reach out to the same contact.

@@ -1,22 +1,25 @@
 <!--
 Sync Impact Report
 
-Version change: 1.0.0 -> 1.1.0
+Version change: 1.1.0 -> 1.2.0
 
 Modified principles:
-- Test-First & Quality: expanded with Playwright E2E requirement, co-located tests, CI single-command constraint
-- Observability & Operational Readiness: expanded with structured JSON logs, metrics (Prometheus/OTel), traces,
-  environment-aware error visibility rules
-- Security & Data Protection: expanded with Zod validation, OWASP protections, bcrypt/argon2, rate limiting,
-  mandatory documentation of security decisions
+- Tech Stack & Architecture: Auth bullet updated — dev-only role switcher permitted alongside NextAuth
+- Authentication & Authorization (RBAC): UserPermission individual overrides demoted to optional v2;
+  simplified Profile-based model (User → Profile → Permission) is now the required minimum;
+  dev-only role switcher pattern documented (no official Next.js mock plugin exists)
 
-Added principles:
-- Tech Stack & Architecture
-- Authentication & Authorization (RBAC)
+Decision rationale:
+- Q1 (auth mock): PDF requirement accepted — mocked role switcher allowed in dev/test environments.
+  Implemented as a dev-only UI component (NODE_ENV === 'development') switching between seeded accounts.
+  NextAuth remains mandatory in production. No official Next.js/NextAuth mock plugin exists;
+  the community-standard approach (CredentialsProvider + storageState for Playwright) is used.
+- Q2 (RBAC depth): PDF requirement accepted — simplified Profile-based RBAC is the required baseline.
+  UserPermission individual overrides are an optional v2 feature, not required for v1.
+- Q3 (testing): Constitution requirement upheld — unit tests + Playwright E2E per feature remain mandatory.
+  PDF's "basic tests" guidance is explicitly overridden.
 
-Added sections:
-- Engineering Standards (language, feature-driven architecture, docs/, data/, scripts/)
-
+Added sections: none
 Removed sections: none
 
 Templates requiring updates:
@@ -28,7 +31,8 @@ Follow-up TODOs:
 - Add .github/CODEOWNERS to codify ownership
 - Define numeric SLOs and alerting playbooks (see Operational Readiness)
 - Add release automation CI (recommended)
-- Initialise Prisma schema with RBAC entities (User, Profile, Permission, UserProfile, ProfilePermission, UserPermission)
+- Initialise Prisma schema with RBAC v1 entities: User, Profile, Permission, UserProfile, ProfilePermission
+- Plan UserPermission override table for v2
 -->
 
 # case-study-test Constitution
@@ -42,7 +46,14 @@ The canonical tech stack for this project is:
 - **Database**: SQLite.
 - **ORM**: Prisma (or Drizzle if explicitly agreed upon in an RFC) — always through a typed data-access layer. Raw queries
   scattered across the codebase are FORBIDDEN.
-- **Authentication**: NextAuth (Auth.js). Sessions, providers, and callbacks MUST be explicit and auditable.
+- **Authentication**: NextAuth (Auth.js) with `@auth/prisma-adapter` — sessions, accounts, and users are persisted
+  in the same SQLite database via Prisma. Sessions, providers, and callbacks MUST be explicit and auditable.
+  In `production`, a credentials provider (email/password with hashed passwords) or OAuth provider MUST be used.
+  In `development`/`testing`, a **dev role switcher** UI component (gated by `NODE_ENV === 'development'`) is
+  permitted: it calls `signIn()` on behalf of a pre-seeded DB account with one click, switching the active role
+  without re-entering credentials. This is NOT a mock — it uses real NextAuth sessions backed by the SQLite DB.
+  Note: Next.js has no official mock auth plugin; the pattern above is the community-standard approach.
+  For Playwright E2E tests, `storageState` is used to persist and reuse authenticated sessions across tests.
 - **Styling**: Tailwind CSS. Inline styles and ad-hoc CSS files are FORBIDDEN unless justified in the PR.
 - **Forms & Validation**: Zod schemas shared between client and server (single source of truth). Every form MUST be validated
   both client-side (UX) and server-side (security). The client MUST NEVER be trusted without server-side re-validation.
@@ -130,29 +141,32 @@ Rationale: Protecting user data and credentials is a top priority.
 ### Authentication & Authorization (RBAC)
 Authentication and authorization MUST NEVER be conflated. They serve distinct concerns:
 
-- **Authentication** (NextAuth): establishes *who* the user is.
+- **Authentication** (NextAuth + `@auth/prisma-adapter`): establishes *who* the user is. User identity, sessions,
+  and accounts are stored in the SQLite database. Profile and permissions are also stored in the same DB and
+  attached to the NextAuth session via the `jwt` callback at login time.
 - **Authorization** (RBAC): determines *what* the authenticated user can do.
 
-The RBAC model is strict and explicitly modeled in the data layer:
+The RBAC model uses Profiles and Permissions, explicitly modeled in the data layer:
 
-- **Permission**: an atomic grant of access to a specific resource/action (e.g. `invoice:read`, `user:delete`,
-  `report:export`).
-- **Profile (Role)**: a named collection of permissions (e.g. `Admin`, `Accountant`, `Viewer`).
-- A `User` is assigned one or more `Profile`(s).
-- A `Profile` owns a set of `Permission`(s).
-- A `User` inherits all permissions from their assigned Profile(s).
-- A `User` MAY additionally receive individual permissions NOT part of their Profile (exceptions/overrides).
+- **Permission**: an atomic grant of access to a specific resource/action (e.g. `program:create`, `cohort:manage`,
+  `enrollment:create`, `admin:read`).
+- **Profile**: a named collection of permissions (e.g. `Student`, `Coach`, `Admin`).
+- A `User` is assigned one `Profile`.
+- A `Profile` owns a set of `Permission`s.
+- A `User` inherits all permissions from their assigned Profile.
+- **Individual permission overrides** (`UserPermission` join table) are an OPTIONAL v2 feature — not required for
+  implementations with a fixed, well-defined set of profiles.
 
 Rules:
-- Every user action (UI action, server action, API call) MUST be gated by an explicit **permission** check — never by role
-  name directly. The check MUST resolve the user's effective permission set
-  (Profile permissions ∪ individually granted permissions) before allowing the action.
+- Every user action (UI action, server action, API call) MUST be gated by an explicit **permission** check — never by
+  profile/role name directly. The check MUST resolve the user's effective permission set from their Profile before
+  allowing the action.
 - Permission checks MUST happen server-side, always.
-- The data model MUST reflect this explicitly:
-  `User`, `Profile`, `Permission`, `UserProfile`, `ProfilePermission`, `UserPermission` join tables, fully normalized.
+- The minimum required v1 data model: `User`, `Profile`, `Permission`, `UserProfile`, `ProfilePermission`.
+  The `UserPermission` join table for individual overrides is optional for v1 and planned for v2.
 
-Rationale: Role-name checks break silently when roles are renamed or merged. Permission-level checks are explicit, testable,
-and resilient to model changes.
+Rationale: A Profile-based model is sufficient for a fixed role set. Mandatory permission-level checks (rather than
+role-name checks) ensure the model remains resilient when profiles are renamed or reorganised in v2.
 
 ## Engineering Standards
 
@@ -186,7 +200,8 @@ All documentation lives in `docs/`, written in Markdown with Mermaid diagrams, i
 
 ### Test Data (`data/`)
 Realistic seed datasets MUST be provided for every feature/domain requiring test data. Seed data MUST include enough variety
-to exercise RBAC edge cases (users with profile-only permissions, users with individual overrides, users with denied access).
+to exercise RBAC edge cases: users with different profiles, and access-denied scenarios for unauthorized actions. Where
+individual permission overrides exist (v2), seed data MUST also cover override scenarios.
 Data files MUST be structured (JSON/SQL/seed scripts) and reproducible.
 
 ### Utility Scripts (`scripts/`)
@@ -213,7 +228,7 @@ All scripts MUST be idempotent where possible, documented with usage comments, a
 - Reviewers: Provide timely, constructive reviews and check Constitution compliance in PRs.
 - Contributors: Open issues, submit PRs, write tests, and help triage defects.
 - Release manager (rotating): Prepare release notes, tag releases, and coordinate publishing.
-- Security contact: Report security issues to krys.tedongmouo@orange.com.
+- Security contact: Report security issues to krystedongmouo@gmail.com.
 
 ## Development Workflow & Operational Policies
 
@@ -267,4 +282,4 @@ Compliance and reviews
 - All PRs with material scope MUST include a short "Constitution compliance" note describing how the change satisfies the
   Constitution and listing any gates (tests, security review, observability) required before merge.
 
-**Version**: 1.1.0 | **Ratified**: 2026-07-04 | **Last Amended**: 2026-07-04
+**Version**: 1.2.0 | **Ratified**: 2026-07-04 | **Last Amended**: 2026-07-04
