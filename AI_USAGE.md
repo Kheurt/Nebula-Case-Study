@@ -31,6 +31,8 @@ This document describes how AI tools were used throughout the development of thi
 
 ### Examples where AI helped me move fast
 - Generate code/layout
+- Fill the data models object quick
+- Structure an incremental implementation plan
 - Choose Design System
 - Setup Design Pattern
 
@@ -40,11 +42,13 @@ This document describes how AI tools were used throughout the development of thi
 - KPIs count issues on dashboard (probably not calculated than wrong calcul)
 
 ### Reviews and validations
-- Fist, I setup e2e tests with playwright, but as the time to review each use case was short, I decided not to care about them and perform tests myself directly
+- Fist, checked the data models to ensure compliance with the requirements
+- Then I setup e2e tests with playwright, but as the time to review each use case was short, I decided not to care about them and perform tests myself directly
 - The design pattern was reviewed by review folder structure and architecture diagrams
 
 ### Parts of the implementation checked most carefully
 - The architecture
+- The data models
 - The e2e tests' results
 
 

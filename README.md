@@ -4,6 +4,7 @@ A Next.js 14+ application for managing job immersion programs, cohorts, and stud
 
 ## Quick Start
 
+Support nodejs v20-24
 ```bash
 npm install
 npm run db:migrate   # Apply schema + generate client
