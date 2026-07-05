@@ -17,6 +17,7 @@ interface EnrollButtonProps {
 const ERROR_MESSAGES: Record<string, string> = {
   COHORT_NOT_OPEN: 'This cohort is not open for enrollment.',
   COHORT_FULL: 'This cohort is full.',
+  COHORT_ENDED: 'This cohort has already ended.',
   ALREADY_ENROLLED: 'You are already enrolled in this cohort.',
   PERMISSION_DENIED: 'You must be logged in as a student to enroll.',
   SESSION_INVALID: 'Your session is invalid. Please sign out and sign back in.',
@@ -44,7 +45,7 @@ export function EnrollButton({ cohortId, enrollmentStatus, startDate, endDate }:
   const isPast = end < now;
   const daysUntil = isUpcoming ? getDaysUntil(start) : 0;
 
-  const isOpen = enrollmentStatus === 'OPEN' && !isUpcoming && !isPast;
+  const isOpen = enrollmentStatus === 'OPEN' && !isPast;
   const disabled = !isOpen || loading;
 
   function getButtonLabel(): string {
@@ -54,8 +55,8 @@ export function EnrollButton({ cohortId, enrollmentStatus, startDate, endDate }:
     if (isPast) return 'Cohort Ended';
     if (isUpcoming) {
       return daysUntil === 1
-        ? 'Enrollment opens tomorrow'
-        : `Enrollment opens in ${daysUntil} days`;
+        ? 'Enroll Now — starts tomorrow'
+        : `Enroll Now — starts in ${daysUntil} days`;
     }
     return 'Enroll Now';
   }

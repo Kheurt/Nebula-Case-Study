@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getMyEnrollments } from '@/features/enrollment/actions/get-my-enrollments';
 import { Badge } from '@/components/ui/Badge';
-import { SubmissionForm } from '@/features/explorations/components/SubmissionForm';
 import { formatDate, formatDateShort, formatDateRange } from '@/lib/date-format';
 import Link from 'next/link';
 import { StatCard } from '@/components/dashboard/StatCard';
@@ -119,6 +118,11 @@ export default async function MyProgramsPage() {
                             {formatDateShort(s.scheduledAt)}
                           </span>
                           <span className="text-gray-900 flex-1">{s.title}</span>
+                          {s.explorationCount > 0 && (
+                            <Badge variant="purple">
+                              {s.explorationCount} exploration{s.explorationCount > 1 ? 's' : ''}
+                            </Badge>
+                          )}
                           <span className="text-gray-400 text-xs">{s.durationMinutes} min</span>
                         </div>
                       ))}
@@ -126,37 +130,39 @@ export default async function MyProgramsPage() {
                   </div>
                 )}
 
-                {/* Explorations */}
-                {e.explorations.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                {/* Pending explorations notification */}
+                {(() => {
+                  const pendingExplorations = e.explorations.filter((exp) => !exp.submission);
+                  if (pendingExplorations.length === 0) return null;
+                  const nextDue = pendingExplorations
+                    .filter((exp) => exp.dueDate)
+                    .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime())[0];
+                  return (
+                    <Link
+                      href="/explorations"
+                      className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 hover:bg-amber-100 transition-colors"
+                    >
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-200 shrink-0">
+                        <svg className="h-4 w-4 text-amber-700" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-amber-800">
+                          {pendingExplorations.length} pending exploration{pendingExplorations.length > 1 ? 's' : ''}
+                        </p>
+                        {nextDue?.dueDate && (
+                          <p className="text-xs text-amber-600">
+                            Next due: {formatDate(nextDue.dueDate)}
+                          </p>
+                        )}
+                      </div>
+                      <svg className="h-4 w-4 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                       </svg>
-                      Explorations
-                    </h3>
-                    <div className="grid gap-3">
-                      {e.explorations.map((exp) => (
-                        <div key={exp.id} className="rounded-lg border border-blue-100 bg-blue-50/50 p-4">
-                          <div className="flex items-start justify-between mb-2">
-                            <div>
-                              <p className="text-sm font-semibold text-gray-900">{exp.title}</p>
-                              <p className="text-xs text-gray-600 mt-0.5">{exp.description}</p>
-                            </div>
-                            {exp.dueDate && (
-                              <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-md border border-gray-200 shrink-0">
-                                Due: {formatDate(exp.dueDate)}
-                              </span>
-                            )}
-                          </div>
-                          <div className="mt-3">
-                            <SubmissionForm explorationId={exp.id} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                    </Link>
+                  );
+                })()}
               </div>
             </div>
           ))}

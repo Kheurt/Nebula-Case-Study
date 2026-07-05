@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { addFeedbackSchema, AddFeedbackInput } from '@/features/explorations/schemas';
 import { addCoachFeedback } from '@/features/explorations/actions/add-feedback';
 import { Button } from '@/components/ui/Button';
+import { useToast } from '@/components/ui/ToastProvider';
 
 interface FeedbackFormProps {
   submissionId: string;
@@ -14,6 +15,7 @@ interface FeedbackFormProps {
 }
 
 export function FeedbackForm({ submissionId, existingFeedback, onSuccess }: FeedbackFormProps) {
+  const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
@@ -30,9 +32,11 @@ export function FeedbackForm({ submissionId, existingFeedback, onSuccess }: Feed
     setError(null);
     const result = await addCoachFeedback(submissionId, data);
     if (result.success) {
+      toast('Feedback saved.', 'success');
       setDone(true);
       onSuccess?.();
     } else {
+      toast(result.error, 'error');
       setError(result.error);
     }
   }

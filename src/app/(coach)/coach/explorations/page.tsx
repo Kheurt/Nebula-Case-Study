@@ -20,6 +20,15 @@ export default async function CoachExplorationsPage() {
           <h1 className="text-2xl font-bold text-gray-900">My Explorations</h1>
           <p className="text-sm text-gray-500 mt-1">Manage exploration exercises for your programs.</p>
         </div>
+        <Link
+          href="/coach/explorations/new"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 transition-colors"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          New Exploration
+        </Link>
       </div>
       {!result.success && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-4 mb-4">
@@ -34,14 +43,18 @@ export default async function CoachExplorationsPage() {
             </svg>
           </div>
           <p className="text-sm text-gray-500">No explorations yet.</p>
-          <p className="text-xs text-gray-400 mt-1">Create one from a program&apos;s detail page.</p>
+          <p className="text-xs text-gray-400 mt-1">Click &quot;New Exploration&quot; to create one.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {explorations.map((exp) => (
-            <div key={exp.id} className="rounded-xl border border-gray-200 bg-white shadow-sm p-5 hover:shadow-md transition-shadow">
+            <Link
+              key={exp.id}
+              href={`/coach/explorations/${exp.id}`}
+              className="rounded-xl border border-gray-200 bg-white shadow-sm p-5 hover:shadow-md hover:border-blue-200 transition-all block"
+            >
               <div className="flex items-start justify-between">
-                <h3 className="text-sm font-semibold text-gray-900">{exp.title}</h3>
+                <h3 className="text-sm font-semibold text-gray-900 group-hover:text-blue-600">{exp.title}</h3>
                 <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700">
                   {exp.submissionCount} submission{exp.submissionCount !== 1 ? 's' : ''}
                 </span>
@@ -54,7 +67,7 @@ export default async function CoachExplorationsPage() {
               {exp.dueDate && (
                 <p className="text-xs text-gray-400 mt-2">Due: {formatDate(exp.dueDate)}</p>
               )}
-            </div>
+            </Link>
           ))}
         </div>
       )}

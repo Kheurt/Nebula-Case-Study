@@ -13,10 +13,11 @@ export async function getDashboardStats(): Promise<ActionResult<DashboardStats>>
   requirePermission(session, 'admin:read');
 
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const in7days = new Date(today);
-    in7days.setDate(today.getDate() + 7);
+    const now = new Date();
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+    const in7days = new Date(todayStart);
+    in7days.setDate(todayStart.getDate() + 7);
 
     const [
       totalPrograms,
@@ -30,11 +31,11 @@ export async function getDashboardStats(): Promise<ActionResult<DashboardStats>>
     ] = await Promise.all([
       prisma.program.count(),
       prisma.program.count({ where: { status: 'PUBLISHED' } }),
-      prisma.cohort.count({ where: { startDate: { lte: today }, endDate: { gte: today } } }),
+      prisma.cohort.count({ where: { startDate: { lte: now }, endDate: { gte: now } } }),
       prisma.enrollment.count(),
       prisma.userProfile.count({ where: { profile: { name: 'student' } } }),
       prisma.userProfile.count({ where: { profile: { name: 'coach' } } }),
-      prisma.cohortSession.count({ where: { scheduledAt: { gte: today, lte: in7days } } }),
+      prisma.cohortSession.count({ where: { scheduledAt: { gte: todayStart, lte: in7days } } }),
       prisma.enrollment.findMany({
         take: 10,
         orderBy: { enrolledAt: 'desc' },

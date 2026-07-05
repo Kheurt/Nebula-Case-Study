@@ -22,6 +22,7 @@ export async function enrollInCohort(cohortId: string): Promise<ActionResult<{ e
 
       if (!cohort) throw new Error('COHORT_NOT_FOUND');
       if (cohort.enrollmentStatus !== 'OPEN') throw new Error('COHORT_NOT_OPEN');
+      if (new Date(cohort.endDate) < new Date()) throw new Error('COHORT_ENDED');
       if (cohort._count.enrollments >= cohort.maxParticipants) throw new Error('COHORT_FULL');
 
       const enrollment = await tx.enrollment.create({
@@ -49,6 +50,9 @@ export async function enrollInCohort(cohortId: string): Promise<ActionResult<{ e
     }
     if (message === 'COHORT_NOT_OPEN') {
       return { success: false, error: 'This cohort is not open for enrollment', code: 'COHORT_NOT_OPEN' };
+    }
+    if (message === 'COHORT_ENDED') {
+      return { success: false, error: 'This cohort has already ended', code: 'COHORT_ENDED' };
     }
     if (message === 'COHORT_FULL') {
       return { success: false, error: 'This cohort is full', code: 'COHORT_FULL' };

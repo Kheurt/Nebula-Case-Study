@@ -11,8 +11,8 @@ function getCohortDisplayStatus(enrollmentStatus: string, startDate: string | Da
   const start = new Date(startDate);
 
   if (end < now) return { label: 'ENDED', variant: 'gray' as const };
-  if (start > now && enrollmentStatus === 'OPEN') return { label: 'UPCOMING', variant: 'blue' as const };
   if (enrollmentStatus === 'FULL') return { label: 'FULL', variant: 'red' as const };
+  if (start > now && enrollmentStatus === 'OPEN') return { label: 'UPCOMING', variant: 'blue' as const };
   if (enrollmentStatus === 'OPEN') return { label: 'OPEN', variant: 'green' as const };
   return { label: enrollmentStatus, variant: 'gray' as const };
 }

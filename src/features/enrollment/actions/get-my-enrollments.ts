@@ -24,12 +24,22 @@ export interface EnrollmentWithDetails {
     scheduledAt: Date;
     durationMinutes: number;
     orderIndex: number;
+    explorationCount: number;
   }[];
   explorations: {
     id: string;
     title: string;
     description: string;
     dueDate: Date | null;
+    source: 'program' | 'session';
+    programTitle: string;
+    sessionTitle: string | null;
+    submission: {
+      id: string;
+      responseText: string;
+      coachFeedback: string | null;
+      createdAt: Date;
+    } | null;
   }[];
 }
 
@@ -48,13 +58,31 @@ export async function getMyEnrollments(): Promise<ActionResult<EnrollmentWithDet
             program: {
               include: {
                 coach: { select: { name: true } },
-                explorations: { select: { id: true, title: true, description: true, dueDate: true } },
+                explorations: {
+                  select: {
+                    id: true, title: true, description: true, dueDate: true,
+                    submissions: {
+                      where: { studentId },
+                      select: { id: true, responseText: true, coachFeedback: true, createdAt: true },
+                      take: 1,
+                    },
+                  },
+                },
               },
             },
             sessions: {
               orderBy: { orderIndex: 'asc' },
               include: {
-                explorations: { select: { id: true, title: true, description: true, dueDate: true } },
+                explorations: {
+                  select: {
+                    id: true, title: true, description: true, dueDate: true,
+                    submissions: {
+                      where: { studentId },
+                      select: { id: true, responseText: true, coachFeedback: true, createdAt: true },
+                      take: 1,
+                    },
+                  },
+                },
               },
             },
             _count: { select: { enrollments: true } },
@@ -81,10 +109,25 @@ export async function getMyEnrollments(): Promise<ActionResult<EnrollmentWithDet
         scheduledAt: s.scheduledAt,
         durationMinutes: s.durationMinutes,
         orderIndex: s.orderIndex,
+        explorationCount: s.explorations.length,
       })),
       explorations: [
-        ...e.cohort.program.explorations,
-        ...e.cohort.sessions.flatMap((s) => s.explorations),
+        ...e.cohort.program.explorations.map((exp) => ({
+          ...exp,
+          source: 'program' as const,
+          programTitle: e.cohort.program.title,
+          sessionTitle: null,
+          submission: exp.submissions[0] ?? null,
+        })),
+        ...e.cohort.sessions.flatMap((s) =>
+          s.explorations.map((exp) => ({
+            ...exp,
+            source: 'session' as const,
+            programTitle: e.cohort.program.title,
+            sessionTitle: s.title,
+            submission: exp.submissions[0] ?? null,
+          })),
+        ),
       ],
     }));
 
