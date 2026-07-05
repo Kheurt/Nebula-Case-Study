@@ -7,7 +7,7 @@
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 24+
 - pnpm (or npm)
 - Git
 

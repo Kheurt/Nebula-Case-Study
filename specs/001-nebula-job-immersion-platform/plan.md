@@ -31,7 +31,7 @@ Build a full-stack Next.js (App Router) web application that allows coaches to c
 | **Unit Testing** | Vitest |
 | **E2E Testing** | Playwright |
 | **Date utilities** | date-fns |
-| **Target Platform** | Node.js 20+, deployed on Vercel |
+| **Target Platform** | Node.js 24+, deployed on Vercel |
 | **Performance Goals** | Pages load under 2s on local dev; enrollment action completes under 500ms |
 | **Constraints** | SQLite single-writer — acceptable for case study scale |
 
